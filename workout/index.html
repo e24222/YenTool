@@ -164,10 +164,7 @@ main{max-width:600px;margin:0 auto;padding:16px}
 .set-row{
   display:flex;align-items:center;gap:6px;
 }
-.set-num{
-  font-size:12px;color:var(--text3);
-  min-width:24px;
-}
+
 
 /* Shared input style */
 .num-input{
@@ -193,22 +190,7 @@ main{max-width:600px;margin:0 auto;padding:16px}
 
 .set-sep{font-size:13px;color:var(--text3);}
 
-/* Add / Remove set buttons */
-.set-actions{
-  display:flex;gap:8px;margin-bottom:12px;
-}
-.set-action-btn{
-  background:none;
-  border:0.5px solid var(--border);
-  border-radius:8px;
-  color:var(--text2);
-  font-size:13px;
-  padding:5px 12px;
-  cursor:pointer;
-  font-family:inherit;
-  transition:background .1s;
-}
-.set-action-btn:active{background:var(--bg3)}
+
 
 /* Ratings */
 .ratings-col{display:flex;flex-direction:column;gap:6px;margin-top:2px}
@@ -486,17 +468,12 @@ function applyToken(){
 }
 
 function exState(id, defaultSets){
-  if(!S[id]){
-    S[id] = {
-      b: null, w: null,
-      sets: defaultSets.map(s => ({wt:'', c: String(s.c), r: String(s.r)}))
-    };
-  }
-  // ensure sets array exists (migration from old format)
-  if(!S[id].sets){
-    S[id].sets = defaultSets.map(s => ({wt:'', c: String(s.c), r: String(s.r)}));
-  }
-  return S[id];
+  if(!S[id]) S[id] = {};
+  const d = S[id];
+  // migrate old format
+  if(!d.b || typeof d.b === 'number') d.b = {wt:'', c: String(defaultSets[0]?.c||''), r: String(defaultSets[0]?.r||'')};
+  if(!d.w || typeof d.w === 'number') d.w = {wt:'', c: String(defaultSets[0]?.c||''), r: String(defaultSets[0]?.r||'')};
+  return d;
 }
 
 /* ── Build ── */
@@ -554,29 +531,26 @@ function exCard(ex_, inSuper){
     placeholder="輸入備註..."
     oninput="setCue('${ex_.id}',this.value)">${savedCue}</textarea></div>`;
 
-  // Sets rows
-  let setsHtml = `<div class="sets-col" id="sets-${ex_.id}">`;
-  d.sets.forEach((s, i) => {
-    setsHtml += setRowHTML(ex_.id, i, s);
-  });
-  setsHtml += `</div>`;
-
-  // Add / Remove buttons
-  setsHtml += `<div class="set-actions">
-    <button class="set-action-btn" onclick="addSet('${ex_.id}')">＋ 加組</button>
-    <button class="set-action-btn" onclick="removeSet('${ex_.id}')">－ 減組</button>
+  const mkRow = (type, s) => `<div class="set-row">
+    <span class="rating-emoji">${type==='b'?'👍':'✅'}</span>
+    <input class="num-input inp-weight" type="number" step="0.25" min="0"
+      inputmode="decimal" placeholder="重量" value="${s.wt}"
+      oninput="setRec('${ex_.id}','${type==='b'?'b':'w'}','wt',this.value)">
+    <span class="set-sep">kg ×</span>
+    <input class="num-input inp-sets" type="number" step="1" min="1"
+      inputmode="numeric" placeholder="組" value="${s.c}"
+      oninput="setRec('${ex_.id}','${type==='b'?'b':'w'}','c',this.value)">
+    <span class="set-sep">組</span>
+    <input class="num-input inp-reps" type="number" step="1" min="1"
+      inputmode="numeric" placeholder="下" value="${s.r}"
+      oninput="setRec('${ex_.id}','${type==='b'?'b':'w'}','r',this.value)">
+    <span class="set-sep">下</span>
   </div>`;
-
-  const ratings = `<div class="ratings-col">
-    <div class="ratings-row">
-      <span class="rating-emoji">👍</span>
-      <span class="rating-summary" id="sum-b-${ex_.id}">${getSummary(ex_.id)}</span>
-    </div>
-    <div class="ratings-row">
-      <span class="rating-emoji">✅</span>
-      <span class="rating-summary" id="sum-w-${ex_.id}">${getSummary(ex_.id)}</span>
-    </div>
+  const setsHtml = `<div class="sets-col">
+    ${mkRow('b', d.b)}
+    ${mkRow('w', d.w)}
   </div>`;
+  const ratings = '';
 
   const cardStyle = inSuper ? 'border-radius:0;border:none;border-bottom:0.5px solid var(--border);margin-bottom:0' : '';
   return `<div class="ex-card" style="${cardStyle}">
@@ -593,25 +567,10 @@ function exCard(ex_, inSuper){
   </div>`;
 }
 
-function setRowHTML(exId, i, s){
-  return `<div class="set-row" id="setrow-${exId}-${i}">
-    <span class="set-num">第${i+1}組</span>
-    <input class="num-input inp-weight" type="number" step="0.25" min="0"
-      inputmode="decimal" placeholder="重量"
-      value="${s.wt}"
-      oninput="setField('${exId}',${i},'wt',this.value)">
-    <span class="set-sep">kg ×</span>
-    <input class="num-input inp-sets" type="number" step="1" min="1"
-      inputmode="numeric" placeholder="組"
-      value="${s.c}"
-      oninput="setField('${exId}',${i},'c',this.value)">
-    <span class="set-sep">組</span>
-    <input class="num-input inp-reps" type="number" step="1" min="1"
-      inputmode="numeric" placeholder="下"
-      value="${s.r}"
-      oninput="setField('${exId}',${i},'r',this.value)">
-    <span class="set-sep">下</span>
-  </div>`;
+function setRec(exId, type, field, val){
+  if(!S[exId]) return;
+  S[exId][type][field] = val;
+  save();
 }
 
 /* ── Actions ── */
@@ -630,66 +589,21 @@ function setCue(id, val){
   save();
 }
 
-function setField(exId, idx, field, val){
-  const d = S[exId];
-  if(!d) return;
-  d.sets[idx][field] = val;
-  save();
-  updateSummary(exId);
-}
 
-function getSummary(exId){
-  const d = S[exId];
-  if(!d || !d.sets) return '';
-  return d.sets
-    .filter(s => s.wt || s.c || s.r)
-    .map(s => {
-      const wt = s.wt ? s.wt+'kg' : '';
-      const cr = (s.c && s.r) ? s.c+'組'+s.r+'下' : (s.c ? s.c+'組' : (s.r ? s.r+'下' : ''));
-      return [wt, cr].filter(Boolean).join('×');
-    })
-    .filter(Boolean)
-    .join(' · ');
-}
 
-function updateSummary(exId){
-  const text = getSummary(exId);
-  const b = document.getElementById('sum-b-' + exId);
-  const w = document.getElementById('sum-w-' + exId);
-  if(b) b.textContent = text;
-  if(w) w.textContent = text;
-}
 
-function addSet(exId){
-  const d = S[exId];
-  if(!d) return;
-  const last = d.sets[d.sets.length-1] || {wt:'', c:'1', r:'12'};
-  const newSet = {wt:'', c: last.c, r: last.r};
-  d.sets.push(newSet);
-  save();
-  const container = document.getElementById('sets-' + exId);
-  const i = d.sets.length - 1;
-  const div = document.createElement('div');
-  div.innerHTML = setRowHTML(exId, i, newSet);
-  container.appendChild(div.firstElementChild);
-  updateSummary(exId);
-}
 
-function removeSet(exId){
-  const d = S[exId];
-  if(!d || d.sets.length <= 1) return;
-  d.sets.pop();
-  save();
-  const container = document.getElementById('sets-' + exId);
-  container.removeChild(container.lastElementChild);
-  updateSummary(exId);
-}
+
+
+
+
+
 
 
 
 function clearWeekRatings(){
   if(!confirm('清除所有動作的本週評分（✅）？')) return;
-  Object.values(S).forEach(d => { if(d) d.w = null; });
+  Object.values(S).forEach(d => { if(d) d.w = {wt:'',c:'',r:''}; });
   save();
   toast('本週評分已清除');
 }
@@ -703,17 +617,12 @@ function copyDay(di){
   day.exercises.forEach(ex_ => {
     const d = S[ex_.id];
     t += ex_.name + '\n';
-    if(d && d.sets){
-      d.sets.forEach((s, i) => {
-        const wt = s.wt || '__';
-        const c  = s.c  || '__';
-        const r  = s.r  || '__';
-        t += `  第${i+1}組 ${wt}kg × ${c}組${r}下\n`;
-      });
+    if(d){
+      const b = d.b || {}, w = d.w || {};
+      t += `👍 ${b.wt||'__'}kg × ${b.c||'__'}組${b.r||'__'}下\n`;
+      t += `✅ ${w.wt||'__'}kg × ${w.c||'__'}組${w.r||'__'}下\n`;
     }
-    const bv = d ? d.b : null;
-    const wv = d ? d.w : null;
-    t += `👍 ${bv!==null ? bv : '__'}/10   ✅ ${wv!==null ? wv : '__'}/10\n\n`;
+    t += '\n';
   });
   navigator.clipboard.writeText(t.trim())
     .then(() => toast('已複製到剪貼簿 ✓'))
