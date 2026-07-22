@@ -259,6 +259,7 @@ main{max-width:600px;margin:0 auto;padding:16px}
     <div class="ws-box ws-skip">下 B</div>
   </div>
   <div class="tabs" id="tabBar"></div>
+  <div id="daySubLabel" style="text-align:center;font-size:13px;color:var(--text2);padding:4px 0 8px;"></div>
 </header>
 
 <main id="mainContent"></main>
@@ -634,8 +635,9 @@ function removeRow(exId, type){
 function switchDay(n){
   document.querySelectorAll('.tab-btn').forEach((b,i) => b.className = 'tab-btn' + (i===n?' active':''));
   document.querySelectorAll('.day-panel').forEach((p,i) => p.className = 'day-panel' + (i===n?' active':''));
-  document.querySelectorAll('.tab-btn')[n].scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
   window.scrollTo({top:0,behavior:'smooth'});
+  const sub = document.getElementById('daySubLabel');
+  if(sub) sub.textContent = DAYS[n].sublabel;
 }
 
 function toggleCue(id){ document.getElementById(id).classList.toggle('open'); }
@@ -690,6 +692,8 @@ function toast(msg){
 /* ── Init ── */
 load();
 build();
+const _initSub = document.getElementById('daySubLabel');
+if(_initSub) _initSub.textContent = DAYS[0].sublabel;
 loadFromGist();
 </script>
 </body>
