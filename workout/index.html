@@ -270,7 +270,11 @@ main{max-width:600px;margin:0 auto;padding:16px}
 <header>
   <div class="header-top">
     <h1>💪 健身課表</h1>
-    <button class="clear-btn" onclick="clearWeekRatings()">清除本週 ✅</button>
+    <div style="display:flex;align-items:center;gap:12px">
+      <span id="syncStatus" style="font-size:13px;color:var(--text3)" title=""></span>
+      <button class="clear-btn" onclick="showTokenUI()" style="font-size:16px;padding:4px">⚙️</button>
+      <button class="clear-btn" onclick="clearWeekRatings()">清除本週 ✅</button>
+    </div>
   </div>
   <div class="week-strip">
     <span class="ws-label">4天週</span>
@@ -292,6 +296,35 @@ main{max-width:600px;margin:0 auto;padding:16px}
 <main id="mainContent"></main>
 
 <div class="toast" id="toast"></div>
+
+<!-- Token overlay -->
+<div id="tokenOverlay" style="display:none;position:fixed;inset:0;z-index:200;
+  background:rgba(0,0,0,0.7);align-items:center;justify-content:center;padding:24px">
+  <div style="background:var(--bg2);border-radius:16px;padding:24px;width:100%;max-width:360px">
+    <div style="font-size:16px;font-weight:600;margin-bottom:8px">GitHub Token 設定</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6">
+      輸入有 <code style="background:var(--bg3);padding:1px 5px;border-radius:4px">gist</code> 權限的 GitHub Token，資料將存在私人 Gist。
+    </div>
+    <input id="tokenInput" type="password"
+      placeholder="ghp_xxxxxxxxxxxx"
+      style="width:100%;background:var(--bg3);border:0.5px solid var(--border);
+        border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;
+        font-family:inherit;margin-bottom:12px"
+      value="">
+    <div style="display:flex;gap:10px">
+      <button onclick="applyToken()"
+        style="flex:1;background:var(--accent);border:none;border-radius:10px;
+          color:#000;font-size:15px;font-weight:600;padding:11px;cursor:pointer;font-family:inherit">
+        儲存
+      </button>
+      <button onclick="hideTokenUI()"
+        style="flex:1;background:var(--bg3);border:none;border-radius:10px;
+          color:var(--text);font-size:15px;padding:11px;cursor:pointer;font-family:inherit">
+        取消
+      </button>
+    </div>
+  </div>
+</div>
 
 <script>
 const DAYS = [
@@ -380,13 +413,96 @@ const DAYS = [
     sets: [{wt:'', c:'', r:''}]   // per-set data
   }
 */
+const GIST_ID = '0e147446e07570f668fbaa8dbd451799';
+const GIST_FILE = 'yentool-workout.json';
 let S = {};
+let _syncTimer = null;
+
+function getToken(){ return localStorage.getItem('wo_token') || ''; }
+function saveToken(t){ localStorage.setItem('wo_token', t.trim()); }
 
 function load(){
   try { S = JSON.parse(localStorage.getItem('wo_v3') || '{}'); } catch(e){ S = {}; }
 }
 function save(){
   localStorage.setItem('wo_v3', JSON.stringify(S));
+  schedulSync();
+}
+
+function schedulSync(){
+  clearTimeout(_syncTimer);
+  _syncTimer = setTimeout(syncToGist, 1500);
+}
+
+async function syncToGist(){
+  const token = getToken();
+  if(!token) return;
+  setSyncStatus('syncing');
+  try {
+    const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `token ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ files: { [GIST_FILE]: { content: JSON.stringify(S) } } })
+    });
+    if(!res.ok) throw new Error(res.status);
+    setSyncStatus('ok');
+  } catch(e) {
+    setSyncStatus('err');
+  }
+}
+
+async function loadFromGist(){
+  const token = getToken();
+  if(!token){ showTokenUI(); return; }
+  setSyncStatus('syncing');
+  try {
+    const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+      headers: { 'Authorization': `token ${token}` }
+    });
+    if(res.status === 401){ showTokenUI(); setSyncStatus('err'); return; }
+    if(!res.ok) throw new Error(res.status);
+    const data = await res.json();
+    const content = data.files[GIST_FILE]?.content;
+    if(content){
+      const remote = JSON.parse(content);
+      if(Object.keys(remote).length > 0){
+        S = remote;
+        localStorage.setItem('wo_v3', JSON.stringify(S));
+        // re-render to reflect loaded data
+        document.getElementById('tabBar').innerHTML = '';
+        document.getElementById('mainContent').innerHTML = '';
+        build();
+      }
+    }
+    setSyncStatus('ok');
+  } catch(e) {
+    setSyncStatus('err');
+  }
+}
+
+function setSyncStatus(state){
+  const el = document.getElementById('syncStatus');
+  if(!el) return;
+  const map = { syncing:'☁️', ok:'✓', err:'⚠️' };
+  el.textContent = map[state] || '';
+  el.title = state === 'err' ? '同步失敗，請檢查 token' : state === 'syncing' ? '同步中…' : '已同步';
+}
+
+function showTokenUI(){
+  document.getElementById('tokenOverlay').style.display = 'flex';
+}
+function hideTokenUI(){
+  document.getElementById('tokenOverlay').style.display = 'none';
+}
+function applyToken(){
+  const t = document.getElementById('tokenInput').value.trim();
+  if(!t) return;
+  saveToken(t);
+  hideTokenUI();
+  loadFromGist();
 }
 
 function exState(id, defaultSets){
@@ -635,6 +751,7 @@ function toast(msg){
 /* ── Init ── */
 load();
 build();
+loadFromGist();
 </script>
 </body>
 </html>
