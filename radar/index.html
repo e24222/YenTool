@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WG&Chunithm</title>
+<meta name="application-name" content="WG&Chunithm">
+<meta name="apple-mobile-web-app-title" content="WG&Chunithm">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#101014">
+<style>
+:root{
+  --bg:#101014; --panel:#1a1a22; --panel2:#20202b;
+  --ink:#f2f0ea; --sub:#9a97a6;
+  --wg:#e6294b; --chu:#f5c518; --mai:#ff4fa3; --line:#2c2c38;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:"Noto Sans TC",-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif;min-height:100vh;padding-bottom:60px}
+.wrap{max-width:560px;margin:0 auto;padding:0 16px}
+header{padding:34px 0 20px;text-align:center}
+.eyebrow{font-size:11px;letter-spacing:.35em;color:var(--sub);text-transform:uppercase;margin-bottom:10px}
+h1{font-size:26px;font-weight:900;letter-spacing:.04em}
+h1 .wgc{color:var(--wg)} h1 .chc{color:var(--chu)} h1 .maic{color:var(--mai)}
+.tagline{font-size:12.5px;color:var(--sub);margin-top:8px}
+.searchbox{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;margin-top:6px}
+.inputrow{display:flex;gap:8px}
+input[type=text]{flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:10px;color:var(--ink);padding:12px 14px;font-size:15px;outline:none;min-width:0}
+input[type=text]:focus{border-color:var(--chu)}
+button{cursor:pointer;border:none;border-radius:10px;font-family:inherit}
+.gobtn{background:var(--chu);color:#181405;font-weight:800;font-size:15px;padding:12px 18px;flex-shrink:0}
+.gobtn:active{transform:scale(.97)}
+.gobtn:disabled{opacity:.5;cursor:wait}
+.subrow{display:flex;justify-content:space-between;align-items:center;margin-top:11px;gap:8px;flex-wrap:wrap}
+.locbtn{background:none;border:1px solid var(--line);color:var(--sub);font-size:12.5px;padding:7px 12px;border-radius:999px}
+.locbtn:active{color:var(--ink)}
+.toggle{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--sub);cursor:pointer;user-select:none}
+.toggle input{accent-color:var(--wg);width:15px;height:15px}
+.status{font-size:12.5px;color:var(--sub);margin-top:12px;min-height:1em}
+.status.err{color:#ff8080}
+#results{display:none;margin-top:22px}
+.origin{font-size:12px;color:var(--sub);margin-bottom:14px;line-height:1.5}
+.combo{border:1px solid var(--line);border-radius:16px;overflow:hidden;margin-bottom:22px;background:linear-gradient(135deg,rgba(230,41,75,.10),rgba(245,197,24,.10))}
+.combo-head{padding:11px 16px;font-size:11px;letter-spacing:.28em;color:var(--ink);border-bottom:1px solid var(--line);font-weight:700}
+.combo-body{padding:14px 16px 16px}
+.combo-line{display:flex;align-items:baseline;gap:8px;margin-bottom:5px;flex-wrap:wrap}
+.combo-line .who{font-weight:800;font-size:15.5px}
+.combo-line .d{font-size:12.5px;color:var(--sub)}
+.combo-gap{font-size:12.5px;color:var(--chu);margin-top:7px;font-weight:700}
+.seclabel{display:flex;align-items:center;gap:10px;margin:20px 0 10px}
+.seclabel .dot{width:9px;height:9px;border-radius:2px;transform:rotate(45deg)}
+.seclabel .t{font-size:13.5px;font-weight:800;letter-spacing:.06em}
+.seclabel .n{font-size:11px;color:var(--sub);margin-left:auto}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:13px 14px;margin-bottom:9px;display:flex;gap:12px;align-items:center}
+.rankd{flex-shrink:0;width:66px;text-align:center}
+.rankd .km{font-size:17px;font-weight:900;font-variant-numeric:tabular-nums}
+.rankd .u{font-size:10px;color:var(--sub);letter-spacing:.1em}
+.info{flex:1;min-width:0}
+.info .nm{font-weight:700;font-size:14.5px;line-height:1.35;word-break:break-word}
+.info .ad{font-size:11.5px;color:var(--sub);margin-top:3px;line-height:1.45;word-break:break-word}
+.badge{display:inline-block;font-size:10px;padding:2px 7px;border-radius:999px;margin-left:6px;vertical-align:1px;font-weight:700}
+.badge.exp{background:rgba(230,41,75,.15);color:#ff7a92;border:1px solid rgba(230,41,75,.4)}
+.badge.spt{background:rgba(85,170,255,.12);color:#7fbfff;border:1px solid rgba(85,170,255,.35)}
+.badge.warn{background:rgba(245,197,24,.12);color:var(--chu);border:1px solid rgba(245,197,24,.4)}
+.badge.mai{background:rgba(255,79,163,.12);color:var(--mai);border:1px solid rgba(255,79,163,.4)}
+.badge.old{background:rgba(154,151,166,.12);color:var(--sub);border:1px solid var(--line)}
+.navbtn{flex-shrink:0;background:var(--panel2);border:1px solid var(--line);color:var(--ink);font-size:12px;padding:8px 12px;border-radius:9px;text-decoration:none}
+.navbtn:active{border-color:var(--chu)}
+.note{font-size:11px;color:var(--sub);line-height:1.7;margin-top:24px;border-top:1px solid var(--line);padding-top:14px}
+@media (prefers-reduced-motion:no-preference){
+  #results.show{animation:up .35s ease}
+  @keyframes up{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="eyebrow">GYM × GAME RADAR</div>
+  <h1><span class="wgc">World Gym</span> × <span class="chc">CHUNITHM</span><br>雙店距離雷達</h1>
+  <div class="tagline">輸入地址,找出離你最近的健身房、CHUNITHM 和 maimai 機廳</div>
+</header>
+
+<div class="searchbox">
+  <div class="inputrow">
+    <input type="text" id="addr" placeholder="例:桃園市中壢區中華路二段501號" enterkeyhint="search">
+    <button class="gobtn" id="go">查詢</button>
+  </div>
+  <div class="subrow">
+    <button class="locbtn" id="useloc">📍 使用目前位置</button>
+    <label class="toggle"><input type="checkbox" id="noexp" checked>排除 Express 店(無淋浴)</label>
+  </div>
+  <div class="status" id="status"></div>
+</div>
+
+<div id="results">
+  <div class="origin" id="origin"></div>
+  <div class="combo" id="combo" style="display:none">
+    <div class="combo-head">⚡ 一次搞定路線</div>
+    <div class="combo-body" id="combobody"></div>
+  </div>
+  <div class="seclabel"><span class="dot" style="background:var(--wg)"></span><span class="t">最近的 World Gym</span><span class="n" id="wgn"></span></div>
+  <div id="wglist"></div>
+  <div class="seclabel"><span class="dot" style="background:var(--chu)"></span><span class="t">最近的 CHUNITHM 機廳</span><span class="n" id="arcn"></span></div>
+  <div id="arclist"></div>
+  <div class="seclabel"><span class="dot" style="background:var(--mai)"></span><span class="t">最近的 maimai 機廳</span><span class="n" id="main2"></span></div>
+  <div id="mailist"></div>
+</div>
+
+<div class="note"><div id="upd" style="margin-bottom:6px"></div>
+  資料來源:World Gym 官網(140 間)與 Music Game Map 音Game地圖社群資料(63 廳/168 台)與 maimai(119 廳,2026/07)。機廳附台數與營業時間,機況以現場為準。距離為直線距離,實際路程會略多。地址查詢使用 OpenStreetMap,輸入越完整越準。
+</div>
+</div>
+<script>
+let DATA = {"mai":[],"wg": [{"n": "彰化和平店", "t": "一般", "a": "彰化縣彰化市和平路57號9-12F", "la": 24.080253, "lo": 120.53793}, {"n": "彰化鹿港店", "t": "一般", "a": "彰化縣鹿港鎮民族路196號2F", "la": 24.054205, "lo": 120.431895}, {"n": "彰化溪湖店", "t": "一般", "a": "彰化縣溪湖鎮西環路398號", "la": 23.960826, "lo": 120.474783}, {"n": "彰化員林店", "t": "一般", "a": "彰化縣員林市員東路二段490號4-7F", "la": 23.957696, "lo": 120.574743}, {"n": "嘉義民族店", "t": "一般", "a": "嘉義市西區民族路608號2F", "la": 23.475811, "lo": 120.443445}, {"n": "chiayi-xingye", "t": "Sport", "a": "嘉義市西區興業西路526號", "la": 23.469598, "lo": 120.434077}, {"n": "新竹光復店", "t": "Express", "a": "新竹市東區光復路二段151號", "la": 24.798051, "lo": 120.993251}, {"n": "新竹香山店", "t": "一般", "a": "新竹市香山區牛埔里牛埔東路247號2樓", "la": 24.797737, "lo": 120.956308}, {"n": "新竹新豐店", "t": "一般", "a": "新竹縣新豐鄉明新街137號", "la": 24.872101, "lo": 120.994949}, {"n": "新竹國賓店", "t": "Sport", "a": "新竹市東區中華路二段190號B1", "la": 24.804965, "lo": 120.963697}, {"n": "新竹中正店", "t": "一般", "a": "新竹市東區中正路110號1F", "la": 24.805855, "lo": 120.969364}, {"n": "新竹竹北店", "t": "Sport", "a": "新竹縣竹北市光明六路東一段189號", "la": 24.809043, "lo": 120.988053}, {"n": "hsinchu-zhubei-huaxing", "t": "Sport", "a": "新竹縣竹北市中央路169號", "la": 24.833215, "lo": 121.011704}, {"n": "新竹竹蓮店", "t": "Express", "a": "新竹市東區竹蓮街15號3F", "la": 24.80166, "lo": 120.965976}, {"n": "花蓮國聯店", "t": "一般", "a": "花蓮縣花蓮國聯五路58號", "la": 23.990388, "lo": 121.603247}, {"n": "花蓮吉安店", "t": "Sport", "a": "花蓮縣吉安中華路2段326號", "la": 23.973563, "lo": 121.57912}, {"n": "高雄寶成店", "t": "一般", "a": "高雄市前鎮區民權二路8號1F", "la": 22.605363, "lo": 120.309815}, {"n": "高雄博愛店", "t": "Express", "a": "高雄市左營區博愛二路320號1F", "la": 22.663646, "lo": 120.303581}, {"n": "高雄大統和平店", "t": "一般", "a": "高雄市苓雅區和平一路218號10F", "la": 22.630899, "lo": 120.315686}, {"n": "高雄文衡店", "t": "Express", "a": "高雄市鳳山區文衡路506號1F", "la": 22.641221, "lo": 120.347366}, {"n": "鳳山五甲店", "t": "一般", "a": "高雄市鳳山區五甲三路166、168號", "la": 22.591053, "lo": 120.324851}, {"n": "高雄鳳山店", "t": "一般", "a": "高雄市鳳山區中山路149號", "la": 22.622595, "lo": 120.355941}, {"n": "高雄岡山店", "t": "一般", "a": "高雄市岡山區民有路68號5F", "la": 22.79214, "lo": 120.294209}, {"n": "高雄楠梓店", "t": "Express", "a": "高雄市楠梓區德民路951號", "la": 22.720419, "lo": 120.286791}, {"n": "興楠店", "t": "Express", "a": "高雄市楠梓區楠盛街88號", "la": 22.726598, "lo": 120.325313}, {"n": "高雄SOGO店", "t": "一般", "a": "高雄市前鎮區三多三路217號16F", "la": 22.614256, "lo": 120.306199}, {"n": "高雄陽明店", "t": "Sport", "a": "高雄市三民區陽明路201號", "la": 22.641188, "lo": 120.34151}, {"n": "高雄中華店", "t": "一般", "a": "高雄市前金區中華三路149號1F", "la": 22.6305, "lo": 120.293071}, {"n": "高雄左營店", "t": "一般", "a": "高雄市左營區重立路428巷1號", "la": 22.652323, "lo": 120.301745}, {"n": "基隆信義店", "t": "Sport", "a": "基隆市信義區信一路92號1", "la": 25.128565, "lo": 121.748915}, {"n": "苗栗頭份店", "t": "一般", "a": "苗栗縣頭份市和平路102號4F", "la": 24.686042, "lo": 120.895825}, {"n": "苗栗苑裡店", "t": "一般", "a": "苗栗縣苑裡鎮為公路65-1號2F", "la": 24.442772, "lo": 120.650728}, {"n": "苗栗中正店", "t": "一般", "a": "苗栗縣苗栗市中正路393巷9號", "la": 24.55126, "lo": 120.81309}, {"n": "苗栗竹南店", "t": "一般", "a": "苗栗縣竹南鎮民權街51巷51號B1", "la": 24.68579, "lo": 120.875813}, {"n": "南投草屯店", "t": "一般", "a": "南投縣草屯鎮中山街208號1F", "la": 23.978346, "lo": 120.680882}, {"n": "新北板橋重慶店", "t": "Sport", "a": "新北市板橋區重慶路247號B1", "la": 25.000451, "lo": 121.461414}, {"n": "新北板橋府中店", "t": "一般", "a": "新北市板橋區中山路一段10號1F", "la": 25.007857, "lo": 121.38397}, {"n": "新北板橋雙十店", "t": "一般", "a": "新北市板橋區雙十路2段143號", "la": 25.02797, "lo": 121.474824}, {"n": "新北板橋中山店", "t": "一般", "a": "新北市板橋區中山路二段326號1F", "la": 25.017933, "lo": 121.460403}, {"n": "新北北新莊店", "t": "Sport", "a": "新北市新莊區幸福路778號B1", "la": 25.036316, "lo": 121.425744}, {"n": "新北淡水店", "t": "一般", "a": "新北市淡水區大忠街89號", "la": 25.177696, "lo": 121.446362}, {"n": "新北新店店", "t": "一般", "a": "新北市新店區中興路三段1號5F", "la": 24.976996, "lo": 121.543556}, {"n": "新北新莊店", "t": "一般", "a": "新北市新莊區民安路188巷5號B1", "la": 25.023162, "lo": 121.405839}, {"n": "新北景平店", "t": "一般", "a": "新北市中和區景平路182號1F", "la": 24.992409, "lo": 121.516403}, {"n": "新北林口店", "t": "一般", "a": "桃園市龜山區復興一路222號1F", "la": 25.057701, "lo": 121.365475}, {"n": "新北蘆洲店", "t": "Express", "a": "新北市蘆洲區民族路31號之5B1", "la": 25.085155, "lo": 121.475399}, {"n": "新北三重店", "t": "一般", "a": "新北市三重區重新路2段78號1F", "la": 25.074883, "lo": 121.481715}, {"n": "三重五華店", "t": "Express", "a": "新北市三重區五華街282號4F", "la": 25.087958, "lo": 121.486552}, {"n": "台北三峽店", "t": "Express", "a": "新北市三峽區文化路59號9F之1", "la": 24.936033, "lo": 121.374634}, {"n": "新北泰山店", "t": "Express", "a": "新北市泰山區明志路三段83號B1之1", "la": 25.041602, "lo": 121.423036}, {"n": "新北土城店", "t": "一般", "a": "新北市土城區青雲路152號5F", "la": 24.979415, "lo": 121.445377}, {"n": "土城海山店", "t": "Sport", "a": "新北市土城區明德路二段62號B1", "la": 24.983479, "lo": 121.443979}, {"n": "新北土城中央店", "t": "Express", "a": "新北市土城區中央路二段191號1F", "la": 24.975451, "lo": 121.439962}, {"n": "新北汐科店", "t": "Sport", "a": "新北市汐止區新台五路一段93號4樓", "la": 25.061914, "lo": 121.647031}, {"n": "新北汐止店", "t": "一般", "a": "新北市汐止區中興路168號2F", "la": 25.065599, "lo": 121.631969}, {"n": "新北永和店", "t": "Sport", "a": "新北市永和區仁愛路309號B1", "la": 25.007774, "lo": 121.493909}, {"n": "新北永和民權店", "t": "一般", "a": "新北市永和區民權路53號B1", "la": 25.002233, "lo": 121.506664}, {"n": "新北中和店", "t": "一般", "a": "新北市中和區中山路三段35-3號1F", "la": 25.008001, "lo": 121.38397}, {"n": "屏東潮州店", "t": "一般", "a": "屏東縣潮州延平路117號2F", "la": 22.554421, "lo": 120.537926}, {"n": "屏東東港店", "t": "Express", "a": "屏東縣東港光復路一段293號2F", "la": 22.468366, "lo": 120.44854}, {"n": "屏東逢甲店", "t": "Express", "a": "屏東縣屏東逢甲路60號1F", "la": 22.67074, "lo": 120.485209}, {"n": "屏東自由店", "t": "一般", "a": "屏東縣屏東自由路550號B1", "la": 22.683812, "lo": 120.486942}, {"n": "台中崇德店", "t": "一般", "a": "台中市北屯區崇德路二段16號", "la": 24.168857, "lo": 120.683016}, {"n": "台中大甲店", "t": "一般", "a": "台中市大甲區仁愛街25號1F", "la": 24.346962, "lo": 120.616216}, {"n": "大里中興店", "t": "Express", "a": "台中市大里區中興路二段486號", "la": 24.110404, "lo": 120.677708}, {"n": "台中大雅店", "t": "一般", "a": "台中市大雅區民生路1段100號1F", "la": 24.226383, "lo": 120.645888}, {"n": "台中東山店", "t": "Sport", "a": "台中市北屯區東山路一段310號", "la": 24.175838, "lo": 120.719165}, {"n": "台中東興店", "t": "Express", "a": "台中市南區東興路一段81號", "la": 24.120405, "lo": 120.653268}, {"n": "台中一中店", "t": "一般", "a": "台中市北區三民路三段125號2F", "la": 24.148813, "lo": 120.68075}, {"n": "台中豐原店", "t": "Sport", "a": "台中市豐原區南陽路508號", "la": 24.249363, "lo": 120.721855}, {"n": "台中進化北店", "t": "Express", "a": "台中市北區進化北路365號B1", "la": 24.162937, "lo": 120.677145}, {"n": "台中黎明店", "t": "一般", "a": "台中市南屯區黎明路二段425號1F", "la": 24.151971, "lo": 120.634796}, {"n": "台中美村店", "t": "一般", "a": "台中市西區美村路一段22號B1", "la": 24.154665, "lo": 120.659158}, {"n": "台中清水店", "t": "一般", "a": "台中市清水區中山路129號", "la": 24.26504, "lo": 120.571297}, {"n": "台中沙鹿店", "t": "一般", "a": "台中市沙鹿區英才路30號", "la": 24.232801, "lo": 120.569901}, {"n": "台中太平店", "t": "Sport", "a": "台中市太平區立功路115號", "la": 24.157697, "lo": 120.720781}, {"n": "台中潭子店", "t": "Express", "a": "台中市潭子區潭興路三段42號4F", "la": 24.211762, "lo": 120.701172}, {"n": "台中東海店", "t": "Express", "a": "台中市西屯區玉門路81號", "la": 24.186115, "lo": 120.609656}, {"n": "文心店", "t": "Express", "a": "台中市南屯區文心路1段521號B1", "la": 24.15269, "lo": 120.570442}, {"n": "台中烏日店", "t": "一般", "a": "台中市烏日區光日路52號", "la": 24.103351, "lo": 120.6224}, {"n": "台中西屯店", "t": "一般", "a": "台中市西屯區西屯路2段258號", "la": 24.178728, "lo": 120.618057}, {"n": "台中學府店", "t": "一般", "a": "台中市南區學府路170號B1", "la": 24.129544, "lo": 120.673965}, {"n": "台南安南店", "t": "一般", "a": "台南市安南區北安路三段135號", "la": 23.040984, "lo": 120.197834}, {"n": "台南安平店", "t": "一般", "a": "台南市安平區慶平路57號", "la": 23.050663, "lo": 120.150395}, {"n": "台南FOCUS店", "t": "一般", "a": "台南市中西區中山路166號B1", "la": 22.995605, "lo": 120.210202}, {"n": "台南海安店", "t": "一般", "a": "台南市北區海安路三段731號", "la": 23.012113, "lo": 120.195343}, {"n": "台南仁德店", "t": "一般", "a": "台南市仁德區中山路788號1F", "la": 22.9736, "lo": 120.243836}, {"n": "台南善化店", "t": "一般", "a": "台南市善化區中正路332號4F", "la": 23.126855, "lo": 120.291916}, {"n": "台南樹林店", "t": "一般", "a": "台南市南區樹林街二段227號", "la": 22.986193, "lo": 120.194597}, {"n": "台南西門店", "t": "Sport", "a": "台南市北區西門路四段61號", "la": 23.007552, "lo": 120.204279}, {"n": "台南新營店", "t": "一般", "a": "台南市新營區中山路56之3號1F", "la": 23.306079, "lo": 120.318168}, {"n": "台南永康店", "t": "Sport", "a": "台南市永康區中華路725之1號B1-1", "la": 23.01722, "lo": 120.227724}, {"n": "台南永康永大店", "t": "一般", "a": "台南市永康區永大一路51號", "la": 23.020827, "lo": 120.25295}, {"n": "台南中華東店", "t": "一般", "a": "台南市東區中華東路二段236號", "la": 22.974756, "lo": 120.221565}, {"n": "台南中華西店", "t": "Express", "a": "台南市中西區中華西路二段650號", "la": 23.005751, "lo": 120.184629}, {"n": "台北101店", "t": "一般", "a": "台北市信義區市府路45號6F", "la": 25.033799, "lo": 121.560117}, {"n": "台北北投中和店", "t": "一般", "a": "台北市北投區中和街366號、366之1號", "la": 25.141857, "lo": 121.49704}, {"n": "台北長春店", "t": "一般", "a": "台北市中山區長春路90號", "la": 25.054747, "lo": 121.524908}, {"n": "台北大安店", "t": "一般", "a": "台北市大安區信義路四段6號3F", "la": 25.033171, "lo": 121.544094}, {"n": "台北大直店", "t": "Sport", "a": "台北市中山區堤頂大道二段588號", "la": 25.084379, "lo": 121.557491}, {"n": "台北大直北安店", "t": "Express", "a": "台北市中山區北安路554巷19號B1", "la": 25.080176, "lo": 121.546747}, {"n": "台北公館店", "t": "一般", "a": "台北市中正區羅斯福路四段68號2F", "la": 25.016277, "lo": 121.53151}, {"n": "台北光復店", "t": "Sport", "a": "台北市大安區忠孝東路四段330號B1", "la": 25.041088, "lo": 121.555328}, {"n": "景美店", "t": "Express", "a": "台北市文山區景後街95號2F", "la": 24.992171, "lo": 121.524515}, {"n": "台北麗水店", "t": "Express", "a": "台北市大安區麗水街18號1F", "la": 25.030815, "lo": 121.526396}, {"n": "台北民權東店", "t": "一般", "a": "台北市中山區民權東路三段72號", "la": 25.061872, "lo": 121.54164}, {"n": "台北民權西店", "t": "Express", "a": "台北市大同區民權西路136號1F", "la": 25.062745, "lo": 121.513974}, {"n": "台北民生店", "t": "一般", "a": "台北市松山區民生東路三段156號B1", "la": 25.05736, "lo": 121.538226}, {"n": "台北民生圓環店", "t": "一般", "a": "台北市松山區民生東路5段196號B1", "la": 25.058715, "lo": 121.562537}, {"n": "台北木柵店", "t": "Express", "a": "台北市文山區木柵路3段96號B1", "la": 24.987951, "lo": 121.5685}, {"n": "台北南京店", "t": "一般", "a": "台北市松山區南京東路五段196號", "la": 25.051218, "lo": 121.564209}, {"n": "台北內湖店", "t": "一般", "a": "台北市內湖區康寧路三段72號8F", "la": 25.071028, "lo": 121.582802}, {"n": "台北內湖福華店", "t": "一般", "a": "台北市內湖區民權東路六段180巷6號B2", "la": 25.068191, "lo": 121.553801}, {"n": "台北內湖港墘店", "t": "一般", "a": "台北市內湖區港墘路221巷33號2F", "la": 25.075804, "lo": 121.574965}, {"n": "台北內湖星雲店", "t": "Express", "a": "台北市內湖區成功路四段64號1F", "la": 25.082599, "lo": 121.590042}, {"n": "台北寧夏店", "t": "Express", "a": "台北市大同區寧夏路11號B1", "la": 25.054158, "lo": 121.511899}, {"n": "台北士林店", "t": "Sport", "a": "台北市士林區基河路250號1樓", "la": 25.095033, "lo": 121.498747}, {"n": "台北松隆店", "t": "一般", "a": "台北市信義區松隆路125號1F", "la": 25.046911, "lo": 121.56958}, {"n": "台北松仁店", "t": "一般", "a": "台北市信義區松仁路277號1F", "la": 25.024194, "lo": 121.567631}, {"n": "台北站前店", "t": "一般", "a": "台北市中正區忠孝西路一段50號B2", "la": 25.046248, "lo": 121.513247}, {"n": "台北天母店", "t": "一般", "a": "台北市士林區中山北路七段34號", "la": 25.116638, "lo": 121.52923}, {"n": "台北天母德行店", "t": "一般", "a": "台北市士林區德行東路331巷35號", "la": 25.112006, "lo": 121.535447}, {"n": "台北通化店", "t": "Express", "a": "台北市大安區通化里臨江街87號2F", "la": 25.030106, "lo": 121.554322}, {"n": "台北統領店", "t": "一般", "a": "台北市大安區忠孝東路四段201號3F", "la": 25.033176, "lo": 121.541519}, {"n": "台北西門店", "t": "一般", "a": "台北市萬華區西寧南路36號B1", "la": 25.045243, "lo": 121.506494}, {"n": "桃園大有店", "t": "一般", "a": "桃園市桃園區大有路630號1F", "la": 25.0155, "lo": 121.317149}, {"n": "桃園大園店", "t": "Express", "a": "桃園市大園區中山南路268號1F", "la": 25.059735, "lo": 121.197542}, {"n": "桃園復興店", "t": "一般", "a": "桃園市桃園區復興路186號1F", "la": 24.990314, "lo": 121.311398}, {"n": "桃園國強店", "t": "Sport", "a": "桃園市桃園區國強一街136號", "la": 24.993233, "lo": 121.284264}, {"n": "桃園南崁店", "t": "Express", "a": "桃園市蘆竹區南崁路265號1F", "la": 25.049482, "lo": 121.29044}, {"n": "桃園內壢店", "t": "Sport", "a": "桃園市中壢區中華路一段667號", "la": 24.969049, "lo": 121.248185}, {"n": "桃園平鎮店", "t": "一般", "a": "桃園市平鎮區環南路二段265號B1", "la": 24.940534, "lo": 121.213064}, {"n": "桃園台茂店", "t": "一般", "a": "桃園市蘆竹區南崁路一段112號B1", "la": 25.053593, "lo": 121.288564}, {"n": "桃園楊梅店", "t": "一般", "a": "桃園市楊梅區新農街205號1F", "la": 24.909883, "lo": 121.145745}, {"n": "中壢中山店", "t": "Express", "a": "桃園市中壢區中山路136號2、3F", "la": 24.955941, "lo": 121.225009}, {"n": "中壢中原店", "t": "一般", "a": "桃園市中壢區中華路二段501號2F", "la": 24.962455, "lo": 121.232269}, {"n": "宜蘭羅東店", "t": "一般", "a": "宜蘭縣羅東鎮興東路85號", "la": 24.678331, "lo": 121.768403}, {"n": "宜蘭友愛店", "t": "一般", "a": "宜蘭縣宜蘭市舊城東路50號5F", "la": 24.757793, "lo": 121.756604}, {"n": "雲林斗六店", "t": "Sport", "a": "雲林縣斗六漢口路76號", "la": 23.711583, "lo": 120.536881}, {"n": "雲林虎尾店", "t": "一般", "a": "雲林縣虎尾復興路226號1、2F", "la": 23.700576, "lo": 120.435303}], "arc": [{"n": "夾到飽親子樂園", "a": "基隆市仁愛區愛四路62號", "la": 25.1292966, "lo": 121.7443337, "cnt": 2, "open": "00：00～24：00", "pay": "現金"}, {"n": "永淇樂園", "a": "台北市中正區市民大道一段50號", "la": 25.048704, "lo": 121.515045, "cnt": 2, "open": "11：00～22：00", "pay": "現金"}, {"n": "湯姆熊台北金萬年店", "a": "台北市西寧南路70號5樓", "la": 25.0435081, "lo": 121.505886, "cnt": 2, "open": "11：30～22：00", "pay": "代幣"}, {"n": "力堡站前店", "a": "台北市忠孝西路一段50-1號 站前地下街7號店", "la": 25.046706, "lo": 121.515135, "cnt": 3, "open": "12：00～22：00", "pay": "現金"}, {"n": "卡通尼樂園明曜店", "a": "台北市大安區忠孝東路四段200號11樓", "la": 25.041275, "lo": 121.552047, "cnt": 2, "open": "11：00～22：00", "pay": "代幣"}, {"n": "湯姆熊台北環球店", "a": "台北市南港區忠孝東路七段371號B1A樓", "la": 25.052257, "lo": 121.6038678, "cnt": 2, "open": "11：00～22：00", "pay": "代幣"}, {"n": "哈啦星球-公館店", "a": "台北市中正區羅斯福路四段130號", "la": 25.0130052, "lo": 121.5359631, "cnt": 4, "open": "00：00～24：00", "pay": "現金"}, {"n": "哈啦星球歡樂聯盟-西門店", "a": "台北市萬華區中華路一段114巷11號", "la": 25.0438514, "lo": 121.5080065, "cnt": 4, "open": "00：00～24：00", "pay": "現金"}, {"n": "抓抓族遊樂園（信陽店）", "a": "台北市中正區信陽街9號1樓", "la": 25.044772, "lo": 121.516604, "cnt": 3, "open": "00：00～24：00", "pay": "現金"}, {"n": "哈啦星球-公館二店", "a": "台北市中正區羅斯福路四段142號", "la": 25.012833, "lo": 121.5359435, "cnt": 4, "open": "00：00～24：00", "pay": "現金"}, {"n": "哈啦星球-饒河店", "a": "台北市松山區饒河街202號", "la": 25.050693, "lo": 121.5770277, "cnt": 2, "open": "00：00～24：00", "pay": "現金"}, {"n": "X50 Music Game Station - 西門二店", "a": "台北市萬華區康定路10號", "la": 25.045762, "lo": 121.503109, "cnt": 6, "open": "00：00～24：00", "pay": "現金"}, {"n": "哈啦星球-士林店", "a": "台北市士林區文林路43號", "la": 25.0868787, "lo": 121.5255253, "cnt": 3, "open": "00：00～24：00", "pay": "現金"}, {"n": "白喵一番屋-台北店", "a": "台北市中正區南陽街50號1樓", "la": 25.0440094, "lo": 121.5159911, "cnt": 10, "open": "00：00～24：00", "pay": "現金"}, {"n": "哈啦星球-板橋南雅店", "a": "新北市板橋區南雅東路31-5號", "la": 25.0061717, "lo": 121.4543735, "cnt": 2, "open": "00：00～24：00", "pay": "現金"}, {"n": "極限遊戲道館（天台廣場）", "a": "新北市三重區重新路二段78號1樓", "la": 25.061916, "lo": 121.497226, "cnt": 3, "open": "00：00～24：00", "pay": "現金"}, {"n": "湯姆熊淡水店", "a": "新北市淡水區中山路8號4樓", "la": 25.1691233, "lo": 121.4450016, "cnt": 2, "open": "11：00～22：00", "pay": "代幣"}, {"n": "老虎歡樂世界（碧潭廣場店）", "a": "新北市新店區北宜路一段2號", "la": 24.9576007, "lo": 121.5379467, "cnt": 2, "open": "11：00～21：30", "pay": "現金"}, {"n": "無限遊戲中心 INF GAME Center", "a": "新北市板橋區中山路一段50巷22號", "la": 25.0088237, "lo": 121.4611473, "cnt": 3, "open": "00：00～24：00", "pay": "現金"}, {"n": "老虎歡樂世界-佳瑪新莊旗艦店", "a": "新北市新莊區幸福路763號3樓", "la": 25.0488159, "lo": 121.4478481, "cnt": 2, "open": "10：00～22：30", "pay": "現金"}, {"n": "夾到飽永和店", "a": "新北市永和區永平路22號", "la": 25.0090082, "lo": 121.5135003, "cnt": 2, "open": "00：00～24：00", "pay": "現金"}, {"n": "老虎歡樂世界（蘆洲佳瑪店）", "a": "新北市蘆洲區長榮路8號3樓", "la": 25.0819813, "lo": 121.4643711, "cnt": 1, "open": "10：00～22：00", "pay": "現金"}, {"n": "小凡樂園", "a": "新北市淡水區英專路94號", "la": 25.1717774, "lo": 121.4458778, "cnt": 3, "open": "00：00～24：00", "pay": "現金"}, {"n": "GiGO-林口三井店2號店", "a": "新北市林口區文化三路一段356號2樓", "la": 25.0706472, "lo": 121.3648336, "cnt": 2, "open": "11：00～21：30", "pay": "代幣"}, {"n": "新都市育樂廣場", "a": "桃園市中壢區中央西路一段120號11樓", "la": 24.958438, "lo": 121.220176, "cnt": 2, "open": "00：00～24：00", "pay": "代幣"}, {"n": "GiGO-桃園大江店", "a": "桃園市中壢區中園路二段501號4樓", "la": 25.0006585, "lo": 121.22921, "cnt": 2, "open": "11：00～22：00", "pay": "代幣"}, {"n": "白喵一番屋-桃園店", "a": "桃園市桃園區成功路一段12號2樓", "la": 24.9929981, "lo": 121.312807, "cnt": 3, "open": "00：00～24：00", "pay": "現金"}, {"n": "老虎歡樂世界-中原家樂福店", "a": "桃園市中壢區中華路二段501號1樓", "la": 24.9623771, "lo": 121.2321257, "cnt": 1, "open": "00：00～24：00", "pay": "現金"}, {"n": "卡通尼樂園-南崁台茂購物中心", "a": "桃園市蘆竹區南崁路一段112號7樓", "la": 25.053471, "lo": 121.288392, "cnt": 2, "open": "11：00～22：00", "pay": "現金"}, {"n": "老虎歡樂世界中正店", "a": "桃園市中壢區中正路51號4樓", "la": 24.9541998, "lo": 121.2240888, "cnt": 1, "open": "11：00～22：00", "pay": "現金"}, {"n": "白喵一番屋-中壢店", "a": "桃園市中壢區延平路575號", "la": 24.9547944, "lo": 121.222628, "cnt": 3, "open": "00：00～24：00", "pay": "現金"}, {"n": "哈啦星球-桃園復興店", "a": "桃園市桃園區復興路166號", "la": 24.990431, "lo": 121.312353, "cnt": 2, "open": "00：00～24：00", "pay": "現金"}, {"n": "湯姆熊新竹中興店", "a": "新竹市東區林森路32號1樓", "la": 24.801872, "lo": 120.9689311, "cnt": 2, "open": "00：00～24：00", "pay": "代幣"}, {"n": "湯姆熊新竹巨城店", "a": "新竹市東區中央路229號8樓", "la": 24.8088655, "lo": 120.9744726, "cnt": 2, "open": "11：00～21：30", "pay": "代幣"}, {"n": "白喵一番屋-新竹店", "a": "新竹市東區中正路2號4樓", "la": 24.8026181, "lo": 120.971574, "cnt": 4, "open": "00：00～24：00", "pay": "現金"}, {"n": "TIGER球の運動館", "a": "台中市南屯區惠文路499號", "la": 24.146745, "lo": 120.643655, "cnt": 2, "open": "09：00～03：00", "pay": "代幣"}, {"n": "湯姆熊親親店(親親戲院)", "a": "台中市北區北屯路14號B1", "la": 24.160239, "lo": 120.692009, "cnt": 2, "open": "00：00～24：00", "pay": "代幣"}, {"n": "GiGO-台中老虎城店", "a": "台中市西屯區河南路三段120號B1", "la": 24.1640826, "lo": 120.6381276, "cnt": 2, "open": "11：00～22：00", "pay": "代幣"}, {"n": "新藝城-三民店", "a": "台中市豐原區三民路39巷3號", "la": 24.25345, "lo": 120.7192033, "cnt": 2, "open": "11：00～22：00", "pay": "現金"}, {"n": "白喵一番屋-台中店", "a": "台中市北區育才街6巷7號", "la": 24.1502434, "lo": 120.6851894, "cnt": 5, "open": "00：00～24：00", "pay": "現金"}, {"n": "GiGO-台中Lalaport店", "a": "台中市東區進德路700號南館3樓", "la": 24.1339197, "lo": 120.6925624, "cnt": 2, "open": "11：00～22：00", "pay": "代幣"}, {"n": "哈啦星球台中逢甲店 H50MGS", "a": "台中市西屯區西屯路二段269-48號", "la": 24.1744929, "lo": 120.6442236, "cnt": 3, "open": "00：00～24：00", "pay": "現金"}, {"n": "哈啦星球-台中一中店", "a": "台中市北區太平路10號", "la": 24.1476635, "lo": 120.6858723, "cnt": 4, "open": "00：00～24：00", "pay": "現金"}, {"n": "湯姆熊員林惠來店", "a": "彰化縣員林市惠來街49-1號", "la": 23.955322, "lo": 120.571881, "cnt": 2, "open": "10：00～22：00", "pay": "代幣"}, {"n": "新藝城虎尾店", "a": "雲林縣虎尾鎮新興路80號1樓", "la": 23.7097402, "lo": 120.4337233, "cnt": 2, "open": "12：00～01：00", "pay": "現金"}, {"n": "變色龍歡樂世界", "a": "嘉義市西區文化路79號", "la": 23.477301, "lo": 120.449769, "cnt": 3, "open": "10：00～03：00", "pay": "現金"}, {"n": "湯姆熊台南真光店", "a": "台南市東區中華東路二段236號", "la": 22.982266, "lo": 120.2301519, "cnt": 2, "open": "00：00～24：00", "pay": "代幣"}, {"n": "湯姆熊台南FOCUS店", "a": "台南市中西區中山路166號", "la": 22.9956675, "lo": 120.210022, "cnt": 2, "open": "11：00～22：00", "pay": "現金"}, {"n": "湯姆熊台南海佃店", "a": "台南市安南區海佃路一段329號", "la": 23.026128, "lo": 120.190749, "cnt": 1, "open": "06：00～24：00", "pay": "代幣"}, {"n": "湯姆熊南紡夢時代店", "a": "台南市東區中華東路一段366號B1", "la": 22.990364, "lo": 120.232981, "cnt": 2, "open": "11：00～22：00", "pay": "代幣"}, {"n": "太鼓歡樂園", "a": "台南市東區中華東路二段62號", "la": 22.98639, "lo": 120.233002, "cnt": 4, "open": "未知", "pay": "代幣"}, {"n": "湯姆熊高雄大遠百", "a": "高雄市苓雅區三多四路21號12樓", "la": 22.6130726, "lo": 120.3039507, "cnt": 2, "open": "11：00～22：00", "pay": "代幣"}, {"n": "湯姆熊六合店", "a": "高雄市前金區六合二路132號", "la": 22.6311004, "lo": 120.2962194, "cnt": 2, "open": "00：00～24：00", "pay": "代幣"}, {"n": "湯姆熊鳳山店", "a": "高雄市鳳山區中山路149號B1", "la": 22.622622, "lo": 120.35817, "cnt": 2, "open": "00：00～24：00", "pay": "代幣"}, {"n": "湯姆熊夢時代店", "a": "高雄市前鎮區中華五路789號5樓、B2", "la": 22.5957419, "lo": 120.3073354, "cnt": 4, "open": "11：00～22：00", "pay": "代幣"}, {"n": "湯姆熊-左營新光店", "a": "高雄市左營區高鐵路123號10樓", "la": 22.688472, "lo": 120.310048, "cnt": 2, "open": "11：00～22：00", "pay": "代幣"}, {"n": "湯姆熊高雄義享天地", "a": "高雄市鼓山區大順一路115號5樓", "la": 22.6565439, "lo": 120.306662, "cnt": 2, "open": "11：00～22：00", "pay": "現金"}, {"n": "湯姆熊樂購廣場", "a": "高雄市岡山區捷安路1巷2號2樓", "la": 22.782118, "lo": 120.3002272, "cnt": 2, "open": "11：00～22：00", "pay": "代幣"}, {"n": "Rhythm Arena 競音殿堂", "a": "高雄市前金區中華三路86-1號", "la": 22.6280144, "lo": 120.2966473, "cnt": 4, "open": "00：00～24：00", "pay": "現金"}, {"n": "Rhythm Arena II 競音殿堂", "a": "高雄市三民區天祥一路102號2樓", "la": 22.6678051, "lo": 120.3202976, "cnt": 5, "open": "00：00～24：00", "pay": "現金"}, {"n": "X50 Music Game Station - 高雄店", "a": "高雄市三民區重慶街1之12號", "la": 22.6407613, "lo": 120.3016396, "cnt": 4, "open": "00：00～24：00", "pay": "現金"}, {"n": "湯姆熊屏東真光店", "a": "屏東縣屏東市民生路62號", "la": 22.667925, "lo": 120.497476, "cnt": 2, "open": "11：00～22：00", "pay": "代幣"}, {"n": "湯姆熊羅東民生店", "a": "宜蘭縣羅東鎮民生路6號2樓", "la": 24.6766954, "lo": 121.7708995, "cnt": 2, "open": "10：00～22：00", "pay": "代幣"}]};
+// 優先載入同站的 data.json(由 GitHub Actions 自動更新)
+fetch('./data.json?t='+Date.now()).then(r=>r.ok?r.json():null).then(j=>{
+  if(j&&j.wg&&j.arc){DATA=j;
+    const el=document.getElementById('upd');
+    if(el&&j.wg_updated)el.textContent='健身房資料更新於 '+j.wg_updated+(j.arc_updated?' ・ 機廳資料更新於 '+j.arc_updated:'');
+    if(lastPos)search(lastPos.lat,lastPos.lng,lastPos.label);
+  }
+}).catch(()=>{});
+const $=id=>document.getElementById(id);
+const R=6371;
+function hav(a,b,c,d){const p=Math.PI/180,dp=(c-a)*p,dl=(d-b)*p;
+  const x=Math.sin(dp/2)**2+Math.cos(a*p)*Math.cos(c*p)*Math.sin(dl/2)**2;
+  return 2*R*Math.asin(Math.sqrt(x));}
+function fmt(km){return km<1?Math.round(km*1000)+' m':km.toFixed(2)+' km';}
+function fmtN(km){return km<1?[Math.round(km*1000),'公尺']:[km.toFixed(2),'公里'];}
+function gmap(la,lo){return 'https://maps.google.com/maps?q='+la+','+lo;}
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+
+function search(lat,lng,label){
+  const noexp=$('noexp').checked;
+  const wgs=DATA.wg.filter(w=>!noexp||w.t!=='Express')
+    .map(w=>({...w,d:hav(lat,lng,w.la,w.lo)})).sort((a,b)=>a.d-b.d);
+  const arcs=DATA.arc.map(a=>({...a,d:hav(lat,lng,a.la,a.lo)})).sort((a,b)=>a.d-b.d);
+
+  $('origin').innerHTML='📍 查詢位置:'+esc(label);
+  $('wgn').textContent=noexp?'已排除 Express':'含所有店型';
+  $('arcn').textContent='共 '+DATA.arc.length+' 廳';
+
+  const card=(x,isWG)=>{
+    const [num,unit]=fmtN(x.d);
+    let badge='';
+    if(isWG&&x.t==='Express')badge='<span class="badge exp">Express</span>';
+    if(isWG&&x.t==='Sport')badge='<span class="badge spt">Sport</span>';
+    if(!isWG&&x.cnt)badge='<span class="badge warn">'+x.cnt+' 台</span>';
+    return `<div class="card">
+      <div class="rankd"><div class="km" style="color:${isWG?'var(--wg)':'var(--chu)'}">${num}</div><div class="u">${unit}</div></div>
+      <div class="info"><div class="nm">${esc(isWG?'World Gym '+x.n:x.n)}${badge}</div><div class="ad">${esc(x.a)}${!isWG&&x.open&&x.open!=='未知'?' ・ '+esc(x.open):''}</div></div>
+      <a class="navbtn" target="_blank" rel="noopener" href="${gmap(x.la,x.lo)}">導航</a></div>`;
+  };
+  $('wglist').innerHTML=wgs.slice(0,3).map(w=>card(w,true)).join('');
+  $('arclist').innerHTML=arcs.slice(0,3).map(a=>card(a,false)).join('');
+  // maimai(獨立顯示)
+  const mais=(DATA.mai||[]).map(m=>({...m,d:hav(lat,lng,m.la,m.lo)})).sort((a,b)=>a.d-b.d);
+  $('main2').textContent='共 '+(DATA.mai||[]).length+' 廳';
+  $('mailist').innerHTML=mais.slice(0,3).map(m=>{
+    const [num,unit]=fmtN(m.d);
+    const dx=(m.v.match(/DX CiRCLEx(\d+)/)||[])[1]||0;
+    const fin=(m.v.match(/FiNALEx(\d+)/)||[])[1]||0;
+    const net=(m.v.match(/獨立網x(\d+)/)||[])[1]||0;
+    let vb='';
+    if(+dx)vb+='<span class="badge mai">DX×'+dx+'</span>';
+    if(+fin)vb+='<span class="badge old">舊框×'+fin+'</span>';
+    if(+net)vb+='<span class="badge old">獨立網×'+net+'</span>';
+    return `<div class="card">
+      <div class="rankd"><div class="km" style="color:var(--mai)">${num}</div><div class="u">${unit}</div></div>
+      <div class="info"><div class="nm">${esc(m.n)}${vb}</div><div class="ad">${esc(m.a)}${m.open&&m.open!=='未知'?' ・ '+esc(m.open):''}</div></div>
+      <a class="navbtn" target="_blank" rel="noopener" href="${gmap(m.la,m.lo)}">導航</a></div>`;
+  }).join('');
+
+  // 一次搞定:在前5近的WG中,找「離我距離 + WG到機廳距離」總和最小、且互距<1.2km的組合
+  let best=null;
+  for(const w of wgs.slice(0,5)){
+    for(const a of arcs){
+      const gap=hav(w.la,w.lo,a.la,a.lo);
+      if(gap>1.2)continue;
+      const score=w.d+gap;
+      if(!best||score<best.score)best={w,a,gap,score};
+    }
+  }
+  if(best){
+    $('combo').style.display='block';
+    $('combobody').innerHTML=
+      `<div class="combo-line"><span class="who" style="color:var(--wg)">World Gym ${esc(best.w.n)}</span><span class="d">離你 ${fmt(best.w.d)}</span></div>`+
+      `<div class="combo-line"><span class="who" style="color:var(--chu)">${esc(best.a.n)}</span><span class="d">離你 ${fmt(best.a.d)}</span></div>`+
+      `<div class="combo-gap">兩店相距僅 ${fmt(best.gap)} — 練完直接走過去打機 🎵</div>`;
+  }else{
+    $('combo').style.display='block';
+    $('combobody').innerHTML='<div class="combo-line"><span class="d">附近沒有互距 1.2 公里內的健身房+機廳組合,兩邊分開跑吧。</span></div>';
+  }
+  $('results').style.display='block';
+  $('results').classList.remove('show');void $('results').offsetWidth;
+  $('results').classList.add('show');
+}
+
+async function geocode(q){
+  const url='https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=tw&accept-language=zh-TW&q='+encodeURIComponent(q);
+  const r=await fetch(url,{headers:{'Accept':'application/json'}});
+  if(!r.ok)throw new Error('http '+r.status);
+  const j=await r.json();
+  if(!j.length)return null;
+  return {lat:+j[0].lat,lng:+j[0].lon,name:j[0].display_name};
+}
+
+async function run(){
+  const q=$('addr').value.trim();
+  if(!q){$('status').textContent='請先輸入地址';$('status').className='status err';return;}
+  $('go').disabled=true;
+  $('status').textContent='定位中…';$('status').className='status';
+  try{
+    let g=await geocode(q);
+    if(!g&&!/台灣|Taiwan/.test(q))g=await geocode(q+' 台灣');
+    if(!g){$('status').textContent='找不到這個地址,試著加上縣市或簡化門牌';$('status').className='status err';}
+    else{$('status').textContent='';search(g.lat,g.lng,g.name);}
+  }catch(e){
+    $('status').textContent='地址查詢服務暫時無法連線,請稍後再試,或改用「使用目前位置」';
+    $('status').className='status err';
+  }
+  $('go').disabled=false;
+}
+
+$('go').onclick=run;
+$('addr').addEventListener('keydown',e=>{if(e.key==='Enter')run();});
+$('noexp').addEventListener('change',()=>{ if($('results').style.display==='block'&&lastPos)search(lastPos.lat,lastPos.lng,lastPos.label); });
+let lastPos=null;
+const _search=search; search=(a,b,c)=>{lastPos={lat:a,lng:b,label:c};_search(a,b,c);};
+
+function locate(auto){
+  if(!navigator.geolocation){
+    if(!auto){$('status').textContent='此裝置不支援定位';$('status').className='status err';}
+    return;
+  }
+  $('status').textContent='取得定位中…';$('status').className='status';
+  navigator.geolocation.getCurrentPosition(
+    p=>{$('status').textContent='';search(p.coords.latitude,p.coords.longitude,'目前位置('+p.coords.latitude.toFixed(4)+', '+p.coords.longitude.toFixed(4)+')');},
+    err=>{
+      if(auto){$('status').textContent='未取得定位權限,輸入地址查詢也可以';$('status').className='status';}
+      else{$('status').textContent='無法取得定位(可能未授權或環境不支援),請改用地址查詢';$('status').className='status err';}
+    },
+    {enableHighAccuracy:true,timeout:10000,maximumAge:60000});
+}
+$('useloc').onclick=()=>locate(false);
+// 開啟頁面時自動嘗試定位
+window.addEventListener('load',()=>locate(true));
+</script>
+</body>
+</html>
