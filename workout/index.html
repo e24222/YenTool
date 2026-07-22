@@ -564,7 +564,15 @@ function exCard(ex_, inSuper){
     </div>`;
     return s;
   };
-  const setsHtml = mkSection('b', d.b) + '<div style="height:6px"></div>' + mkSection('w', d.w);
+  const copyPbBtn = `<div style="text-align:center;margin:4px 0">
+    <button onclick="copyPbToWeek('${ex_.id}')"
+      style="background:none;border:0.5px solid var(--border);border-radius:8px;
+        color:var(--text2);font-size:14px;padding:5px 14px;cursor:pointer;font-family:inherit;
+        transition:background .1s">
+      👍 → ✅
+    </button>
+  </div>`;
+  const setsHtml = mkSection('b', d.b) + copyPbBtn + mkSection('w', d.w);
   const ratings = '';
 
   const cardStyle = inSuper ? 'border-radius:0;border:none;border-bottom:0.5px solid var(--border);margin-bottom:0' : '';
@@ -605,6 +613,23 @@ function setRowField(exId, type, i, field, val){
   if(!S[exId]?.[type]) return;
   S[exId][type][i][field] = val;
   save();
+}
+
+function copyPbToWeek(exId){
+  const d = S[exId];
+  if(!d?.b) return;
+  d.w = d.b.map(s => ({...s}));
+  save();
+  // re-render ✅ section
+  const col = document.getElementById('sets-' + exId + '-w');
+  if(!col) return;
+  col.innerHTML = '';
+  d.w.forEach((s, i) => {
+    const div = document.createElement('div');
+    div.innerHTML = singleRowHTML(exId, 'w', i, s);
+    col.appendChild(div.firstElementChild);
+  });
+  toast('已複製到 ✅');
 }
 
 function addRow(exId, type){
