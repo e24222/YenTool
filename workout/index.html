@@ -41,7 +41,6 @@ body{
   -webkit-tap-highlight-color:transparent;
 }
 
-/* Header */
 header{
   position:sticky;top:0;z-index:100;
   background:var(--bg);
@@ -60,7 +59,6 @@ h1{font-size:18px;font-weight:600;letter-spacing:-.3px}
 }
 .clear-btn:active{color:var(--text2)}
 
-/* Week schedule strip */
 .week-strip{
   display:flex;gap:5px;padding:0 16px 10px;overflow-x:auto;scrollbar-width:none;
 }
@@ -78,7 +76,6 @@ h1{font-size:18px;font-weight:600;letter-spacing:-.3px}
 .ws-skip{background:none;color:var(--text3);text-decoration:line-through;opacity:.5}
 .ws-div{width:0.5px;background:var(--border);margin:4px 2px}
 
-/* Tabs */
 .tabs{
   display:flex;overflow-x:auto;scrollbar-width:none;
   padding:0 16px;
@@ -95,10 +92,8 @@ h1{font-size:18px;font-weight:600;letter-spacing:-.3px}
 }
 .tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:500}
 
-/* Main */
 main{max-width:600px;margin:0 auto;padding:16px}
 
-/* Day header */
 .principle{
   font-size:13px;color:var(--text2);
   background:var(--bg3);border-radius:8px;
@@ -110,16 +105,12 @@ main{max-width:600px;margin:0 auto;padding:16px}
   padding:0 2px;
 }
 
-/* Exercise card */
 .ex-card{
   background:var(--bg2);
   border:0.5px solid var(--border);
   border-radius:var(--radius);
   padding:14px 16px;
   margin-bottom:10px;
-}
-.ex-card.superset-group{
-  border-left:2px solid var(--purple);
 }
 .ex-header{
   display:flex;align-items:flex-start;
@@ -147,24 +138,59 @@ main{max-width:600px;margin:0 auto;padding:16px}
 }
 .cue-text.open{display:block}
 
-/* Weight inputs */
-.sets-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
-.set-entry{display:flex;align-items:center;gap:5px}
-.weight-input{
-  width:62px;
+/* Sets rows */
+.sets-col{
+  display:flex;flex-direction:column;gap:8px;
+  margin-bottom:12px;
+}
+.set-row{
+  display:flex;align-items:center;gap:6px;
+}
+.set-num{
+  font-size:12px;color:var(--text3);
+  min-width:24px;
+}
+
+/* Shared input style */
+.num-input{
   background:var(--bg3);
   border:0.5px solid var(--border);
   border-radius:8px;
   color:var(--text);
   font-size:16px;
   font-family:inherit;
-  padding:7px 6px;
+  padding:7px 4px;
   text-align:center;
   transition:border-color .15s;
+  -moz-appearance:textfield;
 }
-.weight-input:focus{outline:none;border-color:var(--accent)}
-.weight-input::placeholder{color:var(--text3)}
-.set-label{font-size:13px;color:var(--text2);white-space:nowrap}
+.num-input:focus{outline:none;border-color:var(--accent)}
+.num-input::placeholder{color:var(--text3)}
+.num-input::-webkit-inner-spin-button,
+.num-input::-webkit-outer-spin-button{-webkit-appearance:none}
+
+.inp-weight{width:64px;}
+.inp-sets{width:40px;}
+.inp-reps{width:40px;}
+
+.set-sep{font-size:13px;color:var(--text3);}
+
+/* Add / Remove set buttons */
+.set-actions{
+  display:flex;gap:8px;margin-bottom:12px;
+}
+.set-action-btn{
+  background:none;
+  border:0.5px solid var(--border);
+  border-radius:8px;
+  color:var(--text2);
+  font-size:13px;
+  padding:5px 12px;
+  cursor:pointer;
+  font-family:inherit;
+  transition:background .1s;
+}
+.set-action-btn:active{background:var(--bg3)}
 
 /* Ratings */
 .ratings-row{display:flex;gap:14px}
@@ -193,7 +219,6 @@ main{max-width:600px;margin:0 auto;padding:16px}
 .sv-best{color:var(--accent)}
 .sv-week{color:var(--green)}
 
-/* Copy button */
 .copy-btn{
   display:flex;align-items:center;justify-content:center;gap:8px;
   background:none;
@@ -207,7 +232,6 @@ main{max-width:600px;margin:0 auto;padding:16px}
 }
 .copy-btn:active{background:var(--bg3);color:var(--text)}
 
-/* Toast */
 .toast{
   position:fixed;bottom:28px;left:50%;
   transform:translateX(-50%);
@@ -219,7 +243,6 @@ main{max-width:600px;margin:0 auto;padding:16px}
 }
 .toast.show{opacity:1}
 
-/* Panels */
 .day-panel{display:none}
 .day-panel.active{display:block}
 </style>
@@ -260,22 +283,22 @@ const DAYS = [
     exercises:[
       {id:'ua1', name:'上斜機械推',
         cue:'把手對準乳頭上鎖骨下，屁股坐到底、背貼緊，胸口迎向把手往斜前上方推',
-        sets:[{c:1,r:12},{c:2,r:12}]},
+        defaultSets:[{c:1,r:12},{c:2,r:12}]},
       {id:'ua2', name:'反握滑輪下拉',
         cue:'坐最前排，手肘不外張，直上直下',
-        sets:[{c:1,r:12},{c:2,r:12}]},
+        defaultSets:[{c:1,r:12},{c:2,r:12}]},
       {id:'ua3', name:'坐姿肩推',
         cue:'收肩膀再握把',
-        sets:[{c:1,r:10},{c:2,r:10}]},
+        defaultSets:[{c:1,r:10},{c:2,r:10}]},
       {id:'ua4', name:'蝴蝶機夾胸 / 黑門左右',
         cue:null,
-        sets:[{c:1,r:12},{c:2,r:12}]},
+        defaultSets:[{c:1,r:12},{c:2,r:12}]},
       {id:'ua5', name:'二頭彎舉',
         cue:'黑門高度3',
-        sets:[{c:1,r:12},{c:1,r:12}]},
+        defaultSets:[{c:1,r:12},{c:1,r:12}]},
       {id:'ua6', name:'滑輪下壓（三頭）',
         cue:'___格 ___磅',
-        sets:[{c:3,r:12}]},
+        defaultSets:[{c:3,r:12}]},
     ]
   },
   {
@@ -284,13 +307,13 @@ const DAYS = [
     exercises:[
       {id:'la1', name:'腿推機', isNew:true,
         cue:'雙腳與肩同寬，腳尖微外八，背貼緊背墊，膝蓋不鎖死',
-        sets:[{c:2,r:10},{c:2,r:10}]},
+        defaultSets:[{c:2,r:10},{c:2,r:10}]},
       {id:'la2', name:'膝屈伸機',
         cue:null,
-        sets:[{c:1,r:12},{c:2,r:12}]},
+        defaultSets:[{c:1,r:12},{c:2,r:12}]},
       {id:'la3', name:'卷腹機',
         cue:'高___格',
-        sets:[{c:3,r:15}]},
+        defaultSets:[{c:3,r:15}]},
     ]
   },
   {
@@ -299,19 +322,19 @@ const DAYS = [
     exercises:[
       {id:'ub1', name:'坐姿划船',
         cue:'收肩完再拉，頂點停頓',
-        sets:[{c:1,r:12},{c:2,r:12}]},
+        defaultSets:[{c:1,r:12},{c:2,r:12}]},
       {id:'ub2', name:'正握滑輪下拉',
         cue:'吸氣拉把，收肩抬頭，手肘用力帶到口袋，到底停頓',
-        sets:[{c:1,r:12},{c:2,r:12}]},
+        defaultSets:[{c:1,r:12},{c:2,r:12}]},
       {id:'ub3', name:'機械側平舉（黑門）',
         cue:'椅高7', superSet:true,
-        sets:[{c:3,r:15}]},
+        defaultSets:[{c:3,r:15}]},
       {id:'ub4', name:'反向飛鳥',
         cue:null, superSet:true,
-        sets:[{c:1,r:12},{c:2,r:12}]},
+        defaultSets:[{c:1,r:12},{c:2,r:12}]},
       {id:'ub5', name:'臥姿胸推 / 黑門左右',
         cue:'跟上肢 A 的上斜推換角度；臥姿胸推動作還在摸索可先繼續用黑門',
-        sets:[{c:1,r:12},{c:2,r:12}]},
+        defaultSets:[{c:1,r:12},{c:2,r:12}]},
     ]
   },
   {
@@ -321,93 +344,114 @@ const DAYS = [
     exercises:[
       {id:'lb1', name:'羅馬尼亞深蹲（啞鈴）',
         cue:null,
-        sets:[{c:1,r:10},{c:2,r:10},{c:1,r:10}]},
+        defaultSets:[{c:1,r:10},{c:2,r:10},{c:1,r:10}]},
       {id:'lb2', name:'腿後勾機',
         cue:'位置從上到下3~4',
-        sets:[{c:1,r:12},{c:2,r:12}]},
+        defaultSets:[{c:1,r:12},{c:2,r:12}]},
       {id:'lb3', name:'卷腹機',
         cue:'高___格',
-        sets:[{c:3,r:15}]},
+        defaultSets:[{c:3,r:15}]},
     ]
   }
 ];
 
-/* ── State ── */
+/* ── State ──
+  S[exId] = {
+    b: null|0-10,      // best feel rating
+    w: null|0-10,      // this-week rating
+    sets: [{wt:'', c:'', r:''}]   // per-set data
+  }
+*/
 let S = {};
-function load(){try{S=JSON.parse(localStorage.getItem('wo_v2')||'{}')}catch(e){S={}}}
-function save(){localStorage.setItem('wo_v2',JSON.stringify(S))}
-function ex(id){if(!S[id])S[id]={b:null,w:null,wts:[]};return S[id]}
+
+function load(){
+  try { S = JSON.parse(localStorage.getItem('wo_v3') || '{}'); } catch(e){ S = {}; }
+}
+function save(){
+  localStorage.setItem('wo_v3', JSON.stringify(S));
+}
+
+function exState(id, defaultSets){
+  if(!S[id]){
+    S[id] = {
+      b: null, w: null,
+      sets: defaultSets.map(s => ({wt:'', c: String(s.c), r: String(s.r)}))
+    };
+  }
+  // ensure sets array exists (migration from old format)
+  if(!S[id].sets){
+    S[id].sets = defaultSets.map(s => ({wt:'', c: String(s.c), r: String(s.r)}));
+  }
+  return S[id];
+}
 
 /* ── Build ── */
 function build(){
-  const bar=document.getElementById('tabBar');
-  const main=document.getElementById('mainContent');
+  const bar = document.getElementById('tabBar');
+  const main = document.getElementById('mainContent');
 
-  DAYS.forEach((day,i)=>{
-    // Tab
-    const btn=document.createElement('button');
-    btn.className='tab-btn'+(i===0?' active':'');
-    btn.innerHTML=`${day.label}<span style="font-size:11px;color:var(--text3);margin-left:4px">${day.sublabel}</span>`;
-    btn.onclick=()=>switchDay(i);
+  DAYS.forEach((day, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'tab-btn' + (i===0 ? ' active' : '');
+    btn.innerHTML = `${day.label}<span style="font-size:11px;color:var(--text3);margin-left:4px">${day.sublabel}</span>`;
+    btn.onclick = () => switchDay(i);
     bar.appendChild(btn);
 
-    // Panel
-    const panel=document.createElement('div');
-    panel.id='panel-'+i;
-    panel.className='day-panel'+(i===0?' active':'');
+    const panel = document.createElement('div');
+    panel.id = 'panel-' + i;
+    panel.className = 'day-panel' + (i===0 ? ' active' : '');
 
-    let html=`<div class="principle">${day.principle}</div>`;
-    if(day.skipNote) html+=`<div class="skip-note">${day.skipNote}</div>`;
+    let html = `<div class="principle">${day.principle}</div>`;
+    if(day.skipNote) html += `<div class="skip-note">${day.skipNote}</div>`;
 
-    // Group superset pairs
-    let skip=false;
-    day.exercises.forEach((ex_,j)=>{
-      if(skip){skip=false;return}
-      const next=day.exercises[j+1];
-      const isSuperPair=ex_.superSet&&next&&next.superSet;
+    let skip = false;
+    day.exercises.forEach((ex_, j) => {
+      if(skip){ skip=false; return; }
+      const next = day.exercises[j+1];
+      const isSuperPair = ex_.superSet && next && next.superSet;
       if(isSuperPair){
-        html+=`<div style="border:1px solid rgba(191,90,242,0.25);border-radius:var(--radius);overflow:hidden;margin-bottom:10px;">
+        html += `<div style="border:1px solid rgba(191,90,242,0.25);border-radius:var(--radius);overflow:hidden;margin-bottom:10px;">
           <div style="padding:5px 12px;font-size:11px;color:var(--purple);background:rgba(191,90,242,0.08)">⚡ 超級組 — 兩個動作背靠背連做，組間才休息</div>
-          ${exCard(ex_,true)}
-          ${exCard(next,true)}
+          ${exCard(ex_, true)}
+          ${exCard(next, true)}
         </div>`;
-        skip=true;
+        skip = true;
       } else {
-        html+=exCard(ex_,false);
+        html += exCard(ex_, false);
       }
     });
 
-    html+=`<button class="copy-btn" onclick="copyDay(${i})">📋 複製本日記錄</button>`;
-    panel.innerHTML=html;
+    html += `<button class="copy-btn" onclick="copyDay(${i})">📋 複製本日記錄</button>`;
+    panel.innerHTML = html;
     main.appendChild(panel);
   });
 }
 
-function exCard(ex_,inSuper){
-  const d=ex(ex_.id);
-  let badges='';
-  if(ex_.isNew) badges+=`<span class="badge badge-new">新增</span>`;
-  if(ex_.superSet&&!inSuper) badges+=`<span class="badge badge-super">超級組</span>`;
+function exCard(ex_, inSuper){
+  const d = exState(ex_.id, ex_.defaultSets);
 
-  const cueBtn=ex_.cue?`<button class="cue-btn" onclick="toggleCue('c-${ex_.id}')" title="動作提示">ⓘ</button>`:'';
-  const cueDiv=ex_.cue?`<div class="cue-text" id="c-${ex_.id}">${ex_.cue}</div>`:'';
+  let badges = '';
+  if(ex_.isNew) badges += `<span class="badge badge-new">新增</span>`;
+  if(ex_.superSet && !inSuper) badges += `<span class="badge badge-super">超級組</span>`;
 
-  // Sets
-  let setsHtml='<div class="sets-row">';
-  ex_.sets.forEach((s,i)=>{
-    const val=d.wts[i]||'';
-    setsHtml+=`<div class="set-entry">
-      <input class="weight-input" type="number" step="0.25" min="0"
-        value="${val}" placeholder="—"
-        oninput="setW('${ex_.id}',${i},this.value)"
-        inputmode="decimal">
-      <span class="set-label">× ${s.c}組${s.r}下</span>
-    </div>`;
+  const cueBtn = ex_.cue ? `<button class="cue-btn" onclick="toggleCue('c-${ex_.id}')" title="動作提示">ⓘ</button>` : '';
+  const cueDiv = ex_.cue ? `<div class="cue-text" id="c-${ex_.id}">${ex_.cue}</div>` : '';
+
+  // Sets rows
+  let setsHtml = `<div class="sets-col" id="sets-${ex_.id}">`;
+  d.sets.forEach((s, i) => {
+    setsHtml += setRowHTML(ex_.id, i, s);
   });
-  setsHtml+='</div>';
+  setsHtml += `</div>`;
 
-  const bv=d.b,wv=d.w;
-  const ratings=`<div class="ratings-row">
+  // Add / Remove buttons
+  setsHtml += `<div class="set-actions">
+    <button class="set-action-btn" onclick="addSet('${ex_.id}')">＋ 加組</button>
+    <button class="set-action-btn" onclick="removeSet('${ex_.id}')">－ 減組</button>
+  </div>`;
+
+  const bv = d.b, wv = d.w;
+  const ratings = `<div class="ratings-row">
     <div class="rating-item">
       <span class="rating-emoji">👍</span>
       <div class="stepper">
@@ -428,12 +472,12 @@ function exCard(ex_,inSuper){
     </div>
   </div>`;
 
-  const cardStyle=inSuper?'border-radius:0;border:none;border-bottom:0.5px solid var(--border);margin-bottom:0':'';
+  const cardStyle = inSuper ? 'border-radius:0;border:none;border-bottom:0.5px solid var(--border);margin-bottom:0' : '';
   return `<div class="ex-card" style="${cardStyle}">
     <div class="ex-header">
       <div>
         <div class="ex-name">${ex_.name}</div>
-        ${badges?`<div class="badge-row">${badges}</div>`:''}
+        ${badges ? `<div class="badge-row">${badges}</div>` : ''}
       </div>
       ${cueBtn}
     </div>
@@ -443,71 +487,122 @@ function exCard(ex_,inSuper){
   </div>`;
 }
 
+function setRowHTML(exId, i, s){
+  return `<div class="set-row" id="setrow-${exId}-${i}">
+    <span class="set-num">第${i+1}組</span>
+    <input class="num-input inp-weight" type="number" step="0.25" min="0"
+      inputmode="decimal" placeholder="重量"
+      value="${s.wt}"
+      oninput="setField('${exId}',${i},'wt',this.value)">
+    <span class="set-sep">kg ×</span>
+    <input class="num-input inp-sets" type="number" step="1" min="1"
+      inputmode="numeric" placeholder="組"
+      value="${s.c}"
+      oninput="setField('${exId}',${i},'c',this.value)">
+    <span class="set-sep">組</span>
+    <input class="num-input inp-reps" type="number" step="1" min="1"
+      inputmode="numeric" placeholder="下"
+      value="${s.r}"
+      oninput="setField('${exId}',${i},'r',this.value)">
+    <span class="set-sep">下</span>
+  </div>`;
+}
+
 /* ── Actions ── */
 function switchDay(n){
-  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.className='tab-btn'+(i===n?' active':''));
-  document.querySelectorAll('.day-panel').forEach((p,i)=>p.className='day-panel'+(i===n?' active':''));
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.className = 'tab-btn' + (i===n?' active':''));
+  document.querySelectorAll('.day-panel').forEach((p,i) => p.className = 'day-panel' + (i===n?' active':''));
   document.querySelectorAll('.tab-btn')[n].scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
-function toggleCue(id){document.getElementById(id).classList.toggle('open')}
+function toggleCue(id){ document.getElementById(id).classList.toggle('open'); }
 
-function setW(id,idx,val){
-  const d=ex(id);
-  d.wts[idx]=val;
+function setField(exId, idx, field, val){
+  const d = S[exId];
+  if(!d) return;
+  d.sets[idx][field] = val;
   save();
 }
 
-function chR(id,type,delta){
-  const d=ex(id);
-  const cur=d[type]||0;
-  const next=Math.max(0,Math.min(10,cur+delta));
-  d[type]=next===0?null:next;
+function addSet(exId){
+  const d = S[exId];
+  if(!d) return;
+  const last = d.sets[d.sets.length-1] || {wt:'', c:'1', r:'12'};
+  const newSet = {wt:'', c: last.c, r: last.r};
+  d.sets.push(newSet);
   save();
-  const el=document.getElementById(type+'-'+id);
-  if(!el)return;
-  el.textContent=d[type]===null?'—':d[type];
-  el.className='step-val '+(d[type]===null?'sv-null':type==='b'?'sv-best':'sv-week');
+  const container = document.getElementById('sets-' + exId);
+  const i = d.sets.length - 1;
+  const div = document.createElement('div');
+  div.innerHTML = setRowHTML(exId, i, newSet);
+  container.appendChild(div.firstElementChild);
+}
+
+function removeSet(exId){
+  const d = S[exId];
+  if(!d || d.sets.length <= 1) return;
+  d.sets.pop();
+  save();
+  const container = document.getElementById('sets-' + exId);
+  container.removeChild(container.lastElementChild);
+}
+
+function chR(id, type, delta){
+  const d = S[id];
+  if(!d) return;
+  const cur = d[type] || 0;
+  const next = Math.max(0, Math.min(10, cur + delta));
+  d[type] = next === 0 ? null : next;
+  save();
+  const el = document.getElementById(type + '-' + id);
+  if(!el) return;
+  el.textContent = d[type] === null ? '—' : d[type];
+  el.className = 'step-val ' + (d[type]===null ? 'sv-null' : type==='b' ? 'sv-best' : 'sv-week');
 }
 
 function clearWeekRatings(){
-  if(!confirm('清除所有動作的本週評分（✅）？'))return;
-  Object.values(S).forEach(d=>{if(d)d.w=null});
+  if(!confirm('清除所有動作的本週評分（✅）？')) return;
+  Object.values(S).forEach(d => { if(d) d.w = null; });
   save();
-  document.querySelectorAll('[id^="w-"]').forEach(el=>{
-    el.textContent='—';
-    el.className='step-val sv-null';
+  document.querySelectorAll('[id^="w-"]').forEach(el => {
+    el.textContent = '—';
+    el.className = 'step-val sv-null';
   });
   toast('本週評分已清除');
 }
 
 function copyDay(di){
-  const day=DAYS[di];
-  const date=new Date().toLocaleDateString('zh-TW');
-  let t=`${day.label}（${day.sublabel}）\n${date}\n原則 ${day.principle}\n`;
-  if(day.skipNote) t+=`${day.skipNote}\n`;
-  t+='\n';
-  day.exercises.forEach(ex_=>{
-    const d=ex(ex_.id);
-    t+=ex_.name;
-    if(ex_.cue&&!ex_.cue.includes('___')) t+='  '+ex_.cue;
-    t+='\n';
-    const wParts=ex_.sets.map((s,i)=>`${d.wts[i]||'__'} x${s.c}`);
-    t+=wParts.join('  ')+'\n';
-    t+=`👍 ${d.b!==null?d.b+'':'__'}/10\n`;
-    t+=`✅ ${d.w!==null?d.w+'':'__'}/10\n\n`;
+  const day = DAYS[di];
+  const date = new Date().toLocaleDateString('zh-TW');
+  let t = `${day.label}（${day.sublabel}）\n${date}\n原則：${day.principle}\n`;
+  if(day.skipNote) t += `${day.skipNote}\n`;
+  t += '\n';
+  day.exercises.forEach(ex_ => {
+    const d = S[ex_.id];
+    t += ex_.name + '\n';
+    if(d && d.sets){
+      d.sets.forEach((s, i) => {
+        const wt = s.wt || '__';
+        const c  = s.c  || '__';
+        const r  = s.r  || '__';
+        t += `  第${i+1}組 ${wt}kg × ${c}組${r}下\n`;
+      });
+    }
+    const bv = d ? d.b : null;
+    const wv = d ? d.w : null;
+    t += `👍 ${bv!==null ? bv : '__'}/10   ✅ ${wv!==null ? wv : '__'}/10\n\n`;
   });
   navigator.clipboard.writeText(t.trim())
-    .then(()=>toast('已複製到剪貼簿 ✓'))
-    .catch(()=>toast('複製失敗'));
+    .then(() => toast('已複製到剪貼簿 ✓'))
+    .catch(() => toast('複製失敗'));
 }
 
 function toast(msg){
-  const el=document.getElementById('toast');
-  el.textContent=msg;
+  const el = document.getElementById('toast');
+  el.textContent = msg;
   el.classList.add('show');
-  setTimeout(()=>el.classList.remove('show'),2200);
+  setTimeout(() => el.classList.remove('show'), 2200);
 }
 
 /* ── Init ── */
