@@ -211,7 +211,9 @@ main{max-width:600px;margin:0 auto;padding:16px}
 .set-action-btn:active{background:var(--bg3)}
 
 /* Ratings */
-.ratings-row{display:flex;gap:14px}
+.ratings-col{display:flex;flex-direction:column;gap:8px}
+.ratings-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.rating-summary{font-size:12px;color:var(--text2);margin-left:4px;opacity:0.8}
 .rating-item{display:flex;align-items:center;gap:8px}
 .rating-emoji{font-size:15px;width:22px;text-align:center}
 .stepper{
@@ -588,8 +590,9 @@ function exCard(ex_, inSuper){
   </div>`;
 
   const bv = d.b, wv = d.w;
-  const ratings = `<div class="ratings-row">
-    <div class="rating-item">
+  const sumHtml = `<span class="rating-summary" id="sum-${ex_.id}">${getSummary(ex_.id)}</span>`;
+  const ratings = `<div class="ratings-col">
+    <div class="ratings-row">
       <span class="rating-emoji">👍</span>
       <div class="stepper">
         <button class="step-btn" onclick="chR('${ex_.id}','b',-1)">−</button>
@@ -597,8 +600,9 @@ function exCard(ex_, inSuper){
         <button class="step-btn" onclick="chR('${ex_.id}','b',1)">+</button>
       </div>
       <span style="font-size:11px;color:var(--text3)">/10</span>
+      ${sumHtml}
     </div>
-    <div class="rating-item">
+    <div class="ratings-row">
       <span class="rating-emoji">✅</span>
       <div class="stepper">
         <button class="step-btn" onclick="chR('${ex_.id}','w',-1)">−</button>
@@ -606,6 +610,7 @@ function exCard(ex_, inSuper){
         <button class="step-btn" onclick="chR('${ex_.id}','w',1)">+</button>
       </div>
       <span style="font-size:11px;color:var(--text3)">/10</span>
+      ${sumHtml}
     </div>
   </div>`;
 
@@ -666,6 +671,26 @@ function setField(exId, idx, field, val){
   if(!d) return;
   d.sets[idx][field] = val;
   save();
+  updateSummary(exId);
+}
+
+function getSummary(exId){
+  const d = S[exId];
+  if(!d || !d.sets) return '';
+  return d.sets
+    .filter(s => s.wt || s.c || s.r)
+    .map(s => {
+      const wt = s.wt ? s.wt+'kg' : '';
+      const cr = (s.c && s.r) ? s.c+'組'+s.r+'下' : (s.c ? s.c+'組' : (s.r ? s.r+'下' : ''));
+      return [wt, cr].filter(Boolean).join('×');
+    })
+    .filter(Boolean)
+    .join(' · ');
+}
+
+function updateSummary(exId){
+  const text = getSummary(exId);
+  document.querySelectorAll('#sum-' + exId).forEach(el => el.textContent = text);
 }
 
 function addSet(exId){
@@ -680,6 +705,7 @@ function addSet(exId){
   const div = document.createElement('div');
   div.innerHTML = setRowHTML(exId, i, newSet);
   container.appendChild(div.firstElementChild);
+  updateSummary(exId);
 }
 
 function removeSet(exId){
@@ -689,6 +715,7 @@ function removeSet(exId){
   save();
   const container = document.getElementById('sets-' + exId);
   container.removeChild(container.lastElementChild);
+  updateSummary(exId);
 }
 
 function chR(id, type, delta){
