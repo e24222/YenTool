@@ -50,7 +50,7 @@ header{
   display:flex;align-items:center;justify-content:space-between;
   padding:14px 16px 10px;
 }
-h1{font-size:22px;font-weight:600;letter-spacing:-.3px}
+h1{font-size:26px;font-weight:600;letter-spacing:-.3px}
 .clear-btn{
   background:none;border:none;
   color:var(--text3);font-size:13px;
@@ -86,7 +86,7 @@ h1{font-size:22px;font-weight:600;letter-spacing:-.3px}
   flex:1;min-width:0;
   background:none;border:none;border-radius:8px;
   padding:10px 4px;
-  color:var(--text2);font-size:14px;font-weight:500;
+  color:var(--text2);font-size:16px;font-weight:500;
   cursor:pointer;text-align:center;
   font-family:inherit;
   transition:background .15s,color .15s;
@@ -99,12 +99,12 @@ h1{font-size:22px;font-weight:600;letter-spacing:-.3px}
 main{padding:12px}
 
 .principle{
-  font-size:15px;color:var(--text2);
+  font-size:16px;color:var(--text2);
   background:var(--bg3);border-radius:8px;
   padding:8px 12px;margin-bottom:14px;line-height:1.5;
 }
 .skip-note{
-  font-size:12px;color:var(--accent);
+  font-size:15px;color:var(--accent);
   margin-top:-6px;margin-bottom:12px;
   padding:0 2px;
 }
@@ -121,9 +121,9 @@ main{padding:12px}
   justify-content:space-between;gap:8px;
   margin-bottom:8px;
 }
-.ex-name{font-size:18px;font-weight:600;line-height:1.4}
+.ex-name{font-size:20px;font-weight:600;line-height:1.4}
 .badge-row{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
-.badge{font-size:13px;padding:3px 10px;border-radius:20px}
+.badge{font-size:14px;padding:3px 10px;border-radius:20px}
 .badge-new{background:rgba(52,199,89,0.15);color:var(--green)}
 .badge-super{background:rgba(191,90,242,0.15);color:var(--purple)}
 .cue-btn{
@@ -135,7 +135,7 @@ main{padding:12px}
 }
 .cue-btn:active{color:var(--text2)}
 .cue-text{
-  font-size:15px;color:var(--text2);
+  font-size:16px;color:var(--text2);
   background:var(--bg3);border-radius:8px;
   padding:8px 10px;margin-bottom:10px;
   line-height:1.6;display:none;
@@ -198,7 +198,7 @@ main{padding:12px}
 /* Ratings */
 .ratings-col{display:flex;flex-direction:column;gap:6px;margin-top:2px}
 .ratings-row{display:flex;align-items:center;gap:8px}
-.rating-emoji{font-size:20px;flex-shrink:0}
+.rating-emoji{font-size:22px;flex-shrink:0}
 .rating-summary{font-size:13px;color:var(--text2)}
 
 
@@ -206,7 +206,7 @@ main{padding:12px}
 .set-actions{display:flex;gap:8px;margin-bottom:4px;}
 .set-action-btn{
   background:none;border:0.5px solid var(--border);border-radius:8px;
-  color:var(--text2);font-size:15px;padding:7px 14px;
+  color:var(--text2);font-size:16px;padding:8px 16px;
   cursor:pointer;font-family:inherit;transition:background .1s;
 }
 .set-action-btn:active{background:var(--bg3)}
@@ -217,7 +217,7 @@ main{padding:12px}
   border-radius:var(--radius);
   color:var(--text2);
   padding:12px 16px;width:100%;
-  cursor:pointer;font-size:16px;
+  cursor:pointer;font-size:17px;
   font-family:inherit;margin-top:8px;
   transition:background .1s,color .1s;
 }
@@ -263,8 +263,8 @@ main{padding:12px}
     <div class="ws-box ws-skip">下 B</div>
   </div>
   <div class="tabs" id="tabBar"></div>
-  <div id="daySubLabel" style="text-align:center;font-size:13px;color:var(--text2);padding:5px 0 2px;"></div>
-  <div id="daySubLabel" style="text-align:center;font-size:13px;color:var(--text2);padding:4px 0 8px;"></div>
+  <div id="daySubLabel" style="text-align:center;font-size:15px;color:var(--text2);padding:5px 0 2px;"></div>
+  <div id="daySubLabel" style="text-align:center;font-size:15px;color:var(--text2);padding:4px 0 8px;"></div>
 </header>
 
 <main id="mainContent"></main>
@@ -585,7 +585,7 @@ function exCard(ex_, inSuper){
 function singleRowHTML(exId, type, i, s){
   const emoji = type==='b'?'👍':'✅';
   return `<div class="set-row" id="sr-${exId}-${type}-${i}">
-    <span style="font-size:18px;width:24px;text-align:center;flex-shrink:0">${emoji}</span>
+    <span style="font-size:22px;width:28px;text-align:center;flex-shrink:0">${emoji}</span>
     <input class="num-input inp-weight" type="number" step="0.25" min="0"
       inputmode="decimal" placeholder="重量" value="${s.wt||''}"
       oninput="setRowField('${exId}','${type}',${i},'wt',this.value)">
