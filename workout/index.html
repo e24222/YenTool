@@ -618,6 +618,7 @@ function setRowField(exId, type, i, field, val){
 function copyPbToWeek(exId){
   const d = S[exId];
   if(!d?.b) return;
+  if(!confirm('將 👍 的內容覆蓋到 ✅？')) return;
   d.w = d.b.map(s => ({...s}));
   save();
   // re-render ✅ section
