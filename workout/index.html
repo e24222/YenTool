@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>健身課表</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --bg:#111111;
+  --bg2:#1c1c1e;
+  --bg3:#2c2c2e;
+  --text:#f0f0f0;
+  --text2:#999;
+  --text3:#555;
+  --accent:#f0a030;
+  --green:#34c759;
+  --purple:#bf5af2;
+  --border:rgba(255,255,255,0.09);
+  --radius:12px;
+}
+@media(prefers-color-scheme:light){
+  :root{
+    --bg:#f2f2f7;
+    --bg2:#ffffff;
+    --bg3:#e5e5ea;
+    --text:#111111;
+    --text2:#666666;
+    --text3:#aaaaaa;
+    --border:rgba(0,0,0,0.1);
+  }
+}
+
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  padding-bottom:100px;
+  -webkit-tap-highlight-color:transparent;
+}
+
+/* Header */
+header{
+  position:sticky;top:0;z-index:100;
+  background:var(--bg);
+  border-bottom:0.5px solid var(--border);
+}
+.header-top{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 16px 10px;
+}
+h1{font-size:18px;font-weight:600;letter-spacing:-.3px}
+.clear-btn{
+  background:none;border:none;
+  color:var(--text3);font-size:13px;
+  cursor:pointer;font-family:inherit;
+  padding:4px 0;
+}
+.clear-btn:active{color:var(--text2)}
+
+/* Week schedule strip */
+.week-strip{
+  display:flex;gap:5px;padding:0 16px 10px;overflow-x:auto;scrollbar-width:none;
+}
+.week-strip::-webkit-scrollbar{display:none}
+.ws-label{font-size:11px;color:var(--text3);display:flex;align-items:center;padding-right:4px;white-space:nowrap}
+.ws-box{
+  display:flex;align-items:center;justify-content:center;
+  min-width:42px;height:32px;border-radius:6px;
+  font-size:12px;font-weight:500;border:0.5px solid var(--border);
+  white-space:nowrap;
+}
+.ws-u{background:rgba(240,160,48,0.15);color:var(--accent);border-color:rgba(240,160,48,0.3)}
+.ws-l{background:rgba(52,199,89,0.15);color:var(--green);border-color:rgba(52,199,89,0.3)}
+.ws-rest{background:none;color:var(--text3)}
+.ws-skip{background:none;color:var(--text3);text-decoration:line-through;opacity:.5}
+.ws-div{width:0.5px;background:var(--border);margin:4px 2px}
+
+/* Tabs */
+.tabs{
+  display:flex;overflow-x:auto;scrollbar-width:none;
+  padding:0 16px;
+}
+.tabs::-webkit-scrollbar{display:none}
+.tab-btn{
+  background:none;border:none;
+  border-bottom:2px solid transparent;
+  padding:8px 16px;
+  color:var(--text2);font-size:14px;
+  cursor:pointer;white-space:nowrap;
+  font-family:inherit;
+  transition:color .15s,border-color .15s;
+}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:500}
+
+/* Main */
+main{max-width:600px;margin:0 auto;padding:16px}
+
+/* Day header */
+.principle{
+  font-size:13px;color:var(--text2);
+  background:var(--bg3);border-radius:8px;
+  padding:8px 12px;margin-bottom:14px;line-height:1.5;
+}
+.skip-note{
+  font-size:12px;color:var(--accent);
+  margin-top:-6px;margin-bottom:12px;
+  padding:0 2px;
+}
+
+/* Exercise card */
+.ex-card{
+  background:var(--bg2);
+  border:0.5px solid var(--border);
+  border-radius:var(--radius);
+  padding:14px 16px;
+  margin-bottom:10px;
+}
+.ex-card.superset-group{
+  border-left:2px solid var(--purple);
+}
+.ex-header{
+  display:flex;align-items:flex-start;
+  justify-content:space-between;gap:8px;
+  margin-bottom:8px;
+}
+.ex-name{font-size:15px;font-weight:500;line-height:1.4}
+.badge-row{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
+.badge{font-size:11px;padding:2px 8px;border-radius:20px}
+.badge-new{background:rgba(52,199,89,0.15);color:var(--green)}
+.badge-super{background:rgba(191,90,242,0.15);color:var(--purple)}
+.cue-btn{
+  background:none;border:none;
+  color:var(--text3);font-size:18px;
+  cursor:pointer;padding:0;
+  flex-shrink:0;line-height:1;
+  transition:color .15s;
+}
+.cue-btn:active{color:var(--text2)}
+.cue-text{
+  font-size:13px;color:var(--text2);
+  background:var(--bg3);border-radius:8px;
+  padding:8px 10px;margin-bottom:10px;
+  line-height:1.6;display:none;
+}
+.cue-text.open{display:block}
+
+/* Weight inputs */
+.sets-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+.set-entry{display:flex;align-items:center;gap:5px}
+.weight-input{
+  width:62px;
+  background:var(--bg3);
+  border:0.5px solid var(--border);
+  border-radius:8px;
+  color:var(--text);
+  font-size:16px;
+  font-family:inherit;
+  padding:7px 6px;
+  text-align:center;
+  transition:border-color .15s;
+}
+.weight-input:focus{outline:none;border-color:var(--accent)}
+.weight-input::placeholder{color:var(--text3)}
+.set-label{font-size:13px;color:var(--text2);white-space:nowrap}
+
+/* Ratings */
+.ratings-row{display:flex;gap:14px}
+.rating-item{display:flex;align-items:center;gap:8px}
+.rating-emoji{font-size:15px;width:22px;text-align:center}
+.stepper{
+  display:flex;align-items:center;
+  background:var(--bg3);border-radius:8px;
+  overflow:hidden;
+}
+.step-btn{
+  background:none;border:none;
+  color:var(--text);font-size:20px;
+  width:34px;height:34px;
+  cursor:pointer;display:flex;
+  align-items:center;justify-content:center;
+  transition:background .1s;
+}
+.step-btn:active{background:var(--border)}
+.step-val{
+  font-size:15px;font-weight:500;
+  min-width:30px;text-align:center;
+  transition:color .15s;
+}
+.sv-null{color:var(--text3)}
+.sv-best{color:var(--accent)}
+.sv-week{color:var(--green)}
+
+/* Copy button */
+.copy-btn{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  background:none;
+  border:0.5px solid var(--border);
+  border-radius:var(--radius);
+  color:var(--text2);
+  padding:12px 16px;width:100%;
+  cursor:pointer;font-size:14px;
+  font-family:inherit;margin-top:8px;
+  transition:background .1s,color .1s;
+}
+.copy-btn:active{background:var(--bg3);color:var(--text)}
+
+/* Toast */
+.toast{
+  position:fixed;bottom:28px;left:50%;
+  transform:translateX(-50%);
+  background:var(--text);color:var(--bg);
+  padding:10px 20px;border-radius:20px;
+  font-size:14px;opacity:0;
+  transition:opacity .2s;
+  pointer-events:none;white-space:nowrap;z-index:999;
+}
+.toast.show{opacity:1}
+
+/* Panels */
+.day-panel{display:none}
+.day-panel.active{display:block}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <h1>💪 健身課表</h1>
+    <button class="clear-btn" onclick="clearWeekRatings()">清除本週 ✅</button>
+  </div>
+  <div class="week-strip">
+    <span class="ws-label">4天週</span>
+    <div class="ws-box ws-u">上 A</div>
+    <div class="ws-box ws-l">下 A</div>
+    <div class="ws-box ws-rest">休</div>
+    <div class="ws-box ws-u">上 B</div>
+    <div class="ws-box ws-l">下 B</div>
+    <div class="ws-div"></div>
+    <span class="ws-label">3天週</span>
+    <div class="ws-box ws-u">上 A</div>
+    <div class="ws-box ws-l">下 A</div>
+    <div class="ws-box ws-u">上 B</div>
+    <div class="ws-box ws-skip">下 B</div>
+  </div>
+  <div class="tabs" id="tabBar"></div>
+</header>
+
+<main id="mainContent"></main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const DAYS = [
+  {
+    id:'upper-a', label:'上肢 A', sublabel:'胸背推拉',
+    principle:'3組12下 ／ 肩推3組10下 ／ 手臂2組12下',
+    exercises:[
+      {id:'ua1', name:'上斜機械推',
+        cue:'把手對準乳頭上鎖骨下，屁股坐到底、背貼緊，胸口迎向把手往斜前上方推',
+        sets:[{c:1,r:12},{c:2,r:12}]},
+      {id:'ua2', name:'反握滑輪下拉',
+        cue:'坐最前排，手肘不外張，直上直下',
+        sets:[{c:1,r:12},{c:2,r:12}]},
+      {id:'ua3', name:'坐姿肩推',
+        cue:'收肩膀再握把',
+        sets:[{c:1,r:10},{c:2,r:10}]},
+      {id:'ua4', name:'蝴蝶機夾胸 / 黑門左右',
+        cue:null,
+        sets:[{c:1,r:12},{c:2,r:12}]},
+      {id:'ua5', name:'二頭彎舉',
+        cue:'黑門高度3',
+        sets:[{c:1,r:12},{c:1,r:12}]},
+      {id:'ua6', name:'滑輪下壓（三頭）',
+        cue:'___格 ___磅',
+        sets:[{c:3,r:12}]},
+    ]
+  },
+  {
+    id:'lower-a', label:'下肢 A', sublabel:'股四頭主',
+    principle:'腿推4組10下 ／ 其餘3組12下 ／ 核心3組15下',
+    exercises:[
+      {id:'la1', name:'腿推機', isNew:true,
+        cue:'雙腳與肩同寬，腳尖微外八，背貼緊背墊，膝蓋不鎖死',
+        sets:[{c:2,r:10},{c:2,r:10}]},
+      {id:'la2', name:'膝屈伸機',
+        cue:null,
+        sets:[{c:1,r:12},{c:2,r:12}]},
+      {id:'la3', name:'卷腹機',
+        cue:'高___格',
+        sets:[{c:3,r:15}]},
+    ]
+  },
+  {
+    id:'upper-b', label:'上肢 B', sublabel:'背肩主',
+    principle:'3組12下 ／ 側平舉3組15下',
+    exercises:[
+      {id:'ub1', name:'坐姿划船',
+        cue:'收肩完再拉，頂點停頓',
+        sets:[{c:1,r:12},{c:2,r:12}]},
+      {id:'ub2', name:'正握滑輪下拉',
+        cue:'吸氣拉把，收肩抬頭，手肘用力帶到口袋，到底停頓',
+        sets:[{c:1,r:12},{c:2,r:12}]},
+      {id:'ub3', name:'機械側平舉（黑門）',
+        cue:'椅高7', superSet:true,
+        sets:[{c:3,r:15}]},
+      {id:'ub4', name:'反向飛鳥',
+        cue:null, superSet:true,
+        sets:[{c:1,r:12},{c:2,r:12}]},
+      {id:'ub5', name:'臥姿胸推 / 黑門左右',
+        cue:'跟上肢 A 的上斜推換角度；臥姿胸推動作還在摸索可先繼續用黑門',
+        sets:[{c:1,r:12},{c:2,r:12}]},
+    ]
+  },
+  {
+    id:'lower-b', label:'下肢 B', sublabel:'後鏈主',
+    principle:'羅馬尼亞4組10下 ／ 其餘3組12下 ／ 核心3組15下',
+    skipNote:'★ 忙或沒恢復可跳過這天',
+    exercises:[
+      {id:'lb1', name:'羅馬尼亞深蹲（啞鈴）',
+        cue:null,
+        sets:[{c:1,r:10},{c:2,r:10},{c:1,r:10}]},
+      {id:'lb2', name:'腿後勾機',
+        cue:'位置從上到下3~4',
+        sets:[{c:1,r:12},{c:2,r:12}]},
+      {id:'lb3', name:'卷腹機',
+        cue:'高___格',
+        sets:[{c:3,r:15}]},
+    ]
+  }
+];
+
+/* ── State ── */
+let S = {};
+function load(){try{S=JSON.parse(localStorage.getItem('wo_v2')||'{}')}catch(e){S={}}}
+function save(){localStorage.setItem('wo_v2',JSON.stringify(S))}
+function ex(id){if(!S[id])S[id]={b:null,w:null,wts:[]};return S[id]}
+
+/* ── Build ── */
+function build(){
+  const bar=document.getElementById('tabBar');
+  const main=document.getElementById('mainContent');
+
+  DAYS.forEach((day,i)=>{
+    // Tab
+    const btn=document.createElement('button');
+    btn.className='tab-btn'+(i===0?' active':'');
+    btn.innerHTML=`${day.label}<span style="font-size:11px;color:var(--text3);margin-left:4px">${day.sublabel}</span>`;
+    btn.onclick=()=>switchDay(i);
+    bar.appendChild(btn);
+
+    // Panel
+    const panel=document.createElement('div');
+    panel.id='panel-'+i;
+    panel.className='day-panel'+(i===0?' active':'');
+
+    let html=`<div class="principle">${day.principle}</div>`;
+    if(day.skipNote) html+=`<div class="skip-note">${day.skipNote}</div>`;
+
+    // Group superset pairs
+    let skip=false;
+    day.exercises.forEach((ex_,j)=>{
+      if(skip){skip=false;return}
+      const next=day.exercises[j+1];
+      const isSuperPair=ex_.superSet&&next&&next.superSet;
+      if(isSuperPair){
+        html+=`<div style="border:1px solid rgba(191,90,242,0.25);border-radius:var(--radius);overflow:hidden;margin-bottom:10px;">
+          <div style="padding:5px 12px;font-size:11px;color:var(--purple);background:rgba(191,90,242,0.08)">⚡ 超級組 — 兩個動作背靠背連做，組間才休息</div>
+          ${exCard(ex_,true)}
+          ${exCard(next,true)}
+        </div>`;
+        skip=true;
+      } else {
+        html+=exCard(ex_,false);
+      }
+    });
+
+    html+=`<button class="copy-btn" onclick="copyDay(${i})">📋 複製本日記錄</button>`;
+    panel.innerHTML=html;
+    main.appendChild(panel);
+  });
+}
+
+function exCard(ex_,inSuper){
+  const d=ex(ex_.id);
+  let badges='';
+  if(ex_.isNew) badges+=`<span class="badge badge-new">新增</span>`;
+  if(ex_.superSet&&!inSuper) badges+=`<span class="badge badge-super">超級組</span>`;
+
+  const cueBtn=ex_.cue?`<button class="cue-btn" onclick="toggleCue('c-${ex_.id}')" title="動作提示">ⓘ</button>`:'';
+  const cueDiv=ex_.cue?`<div class="cue-text" id="c-${ex_.id}">${ex_.cue}</div>`:'';
+
+  // Sets
+  let setsHtml='<div class="sets-row">';
+  ex_.sets.forEach((s,i)=>{
+    const val=d.wts[i]||'';
+    setsHtml+=`<div class="set-entry">
+      <input class="weight-input" type="number" step="0.25" min="0"
+        value="${val}" placeholder="—"
+        oninput="setW('${ex_.id}',${i},this.value)"
+        inputmode="decimal">
+      <span class="set-label">× ${s.c}組${s.r}下</span>
+    </div>`;
+  });
+  setsHtml+='</div>';
+
+  const bv=d.b,wv=d.w;
+  const ratings=`<div class="ratings-row">
+    <div class="rating-item">
+      <span class="rating-emoji">👍</span>
+      <div class="stepper">
+        <button class="step-btn" onclick="chR('${ex_.id}','b',-1)">−</button>
+        <span class="step-val ${bv===null?'sv-null':'sv-best'}" id="b-${ex_.id}">${bv===null?'—':bv}</span>
+        <button class="step-btn" onclick="chR('${ex_.id}','b',1)">+</button>
+      </div>
+      <span style="font-size:11px;color:var(--text3)">/10</span>
+    </div>
+    <div class="rating-item">
+      <span class="rating-emoji">✅</span>
+      <div class="stepper">
+        <button class="step-btn" onclick="chR('${ex_.id}','w',-1)">−</button>
+        <span class="step-val ${wv===null?'sv-null':'sv-week'}" id="w-${ex_.id}">${wv===null?'—':wv}</span>
+        <button class="step-btn" onclick="chR('${ex_.id}','w',1)">+</button>
+      </div>
+      <span style="font-size:11px;color:var(--text3)">/10</span>
+    </div>
+  </div>`;
+
+  const cardStyle=inSuper?'border-radius:0;border:none;border-bottom:0.5px solid var(--border);margin-bottom:0':'';
+  return `<div class="ex-card" style="${cardStyle}">
+    <div class="ex-header">
+      <div>
+        <div class="ex-name">${ex_.name}</div>
+        ${badges?`<div class="badge-row">${badges}</div>`:''}
+      </div>
+      ${cueBtn}
+    </div>
+    ${cueDiv}
+    ${setsHtml}
+    ${ratings}
+  </div>`;
+}
+
+/* ── Actions ── */
+function switchDay(n){
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.className='tab-btn'+(i===n?' active':''));
+  document.querySelectorAll('.day-panel').forEach((p,i)=>p.className='day-panel'+(i===n?' active':''));
+  document.querySelectorAll('.tab-btn')[n].scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function toggleCue(id){document.getElementById(id).classList.toggle('open')}
+
+function setW(id,idx,val){
+  const d=ex(id);
+  d.wts[idx]=val;
+  save();
+}
+
+function chR(id,type,delta){
+  const d=ex(id);
+  const cur=d[type]||0;
+  const next=Math.max(0,Math.min(10,cur+delta));
+  d[type]=next===0?null:next;
+  save();
+  const el=document.getElementById(type+'-'+id);
+  if(!el)return;
+  el.textContent=d[type]===null?'—':d[type];
+  el.className='step-val '+(d[type]===null?'sv-null':type==='b'?'sv-best':'sv-week');
+}
+
+function clearWeekRatings(){
+  if(!confirm('清除所有動作的本週評分（✅）？'))return;
+  Object.values(S).forEach(d=>{if(d)d.w=null});
+  save();
+  document.querySelectorAll('[id^="w-"]').forEach(el=>{
+    el.textContent='—';
+    el.className='step-val sv-null';
+  });
+  toast('本週評分已清除');
+}
+
+function copyDay(di){
+  const day=DAYS[di];
+  const date=new Date().toLocaleDateString('zh-TW');
+  let t=`${day.label}（${day.sublabel}）\n${date}\n原則 ${day.principle}\n`;
+  if(day.skipNote) t+=`${day.skipNote}\n`;
+  t+='\n';
+  day.exercises.forEach(ex_=>{
+    const d=ex(ex_.id);
+    t+=ex_.name;
+    if(ex_.cue&&!ex_.cue.includes('___')) t+='  '+ex_.cue;
+    t+='\n';
+    const wParts=ex_.sets.map((s,i)=>`${d.wts[i]||'__'} x${s.c}`);
+    t+=wParts.join('  ')+'\n';
+    t+=`👍 ${d.b!==null?d.b+'':'__'}/10\n`;
+    t+=`✅ ${d.w!==null?d.w+'':'__'}/10\n\n`;
+  });
+  navigator.clipboard.writeText(t.trim())
+    .then(()=>toast('已複製到剪貼簿 ✓'))
+    .catch(()=>toast('複製失敗'));
+}
+
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg;
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),2200);
+}
+
+/* ── Init ── */
+load();
+build();
+</script>
+</body>
+</html>
