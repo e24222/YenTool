@@ -589,14 +589,15 @@ function singleRowHTML(exId, type, i, s){
     <input class="num-input inp-weight" type="number" step="0.25" min="0"
       inputmode="decimal" placeholder="重量" value="${s.wt||''}"
       oninput="setRowField('${exId}','${type}',${i},'wt',this.value)">
-    <span class="set-sep">×</span>
+    <span class="set-sep">kg ×</span>
     <input class="num-input inp-reps" type="number" step="1" min="1"
       inputmode="numeric" placeholder="次數" value="${s.r||''}"
       oninput="setRowField('${exId}','${type}',${i},'r',this.value)">
-    <span class="set-sep">×</span>
+    <span class="set-sep">下 ×</span>
     <input class="num-input inp-sets" type="number" step="1" min="1"
       inputmode="numeric" placeholder="組數" value="${s.c||''}"
       oninput="setRowField('${exId}','${type}',${i},'c',this.value)">
+    <span class="set-sep">組</span>
   </div>`;
 }
 
