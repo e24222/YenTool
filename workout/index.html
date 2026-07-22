@@ -259,7 +259,6 @@ main{max-width:600px;margin:0 auto;padding:16px}
     <div style="display:flex;align-items:center;gap:12px">
       <span id="syncStatus" style="font-size:13px;color:var(--text3)" title=""></span>
       <button class="clear-btn" onclick="showTokenUI()" style="font-size:16px;padding:4px">⚙️</button>
-      <button class="clear-btn" onclick="clearWeekRatings()">清除本週 ✅</button>
     </div>
   </div>
   <div class="week-strip">
@@ -690,12 +689,7 @@ function setCue(id, val){
 
 
 
-function clearWeekRatings(){
-  if(!confirm('清除所有動作的本週評分（✅）？')) return;
-  Object.values(S).forEach(d => { if(d?.sets) d.sets.forEach(s => { s.wt=''; }); });
-  save();
-  toast('本週評分已清除');
-}
+
 
 function copyDay(di){
   const day = DAYS[di];
