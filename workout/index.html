@@ -467,7 +467,9 @@ function setSyncStatus(state){
   const el = document.getElementById('syncStatus');
   if(!el) return;
   const map = { syncing:'☁️', ok:'✓', err:'⚠️' };
+  const color = { syncing:'var(--text3)', ok:'var(--green)', err:'#ff6b6b' };
   el.textContent = map[state] || '';
+  el.style.color = color[state] || 'var(--text3)';
   el.title = state === 'err' ? '同步失敗，請檢查 token' : state === 'syncing' ? '同步中…' : '已同步';
 }
 
