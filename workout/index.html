@@ -285,7 +285,8 @@ main{padding:12px}
         border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;
         font-family:inherit;margin-bottom:12px"
       value="">
-    <div style="display:flex;gap:10px">
+    <div id="tokenTestResult" style="font-size:13px;min-height:18px;margin-bottom:8px;text-align:center"></div>
+    <div style="display:flex;gap:10px;margin-bottom:10px">
       <button onclick="applyToken()"
         style="flex:1;background:var(--accent);border:none;border-radius:10px;
           color:#000;font-size:15px;font-weight:600;padding:11px;cursor:pointer;font-family:inherit">
@@ -297,6 +298,11 @@ main{padding:12px}
         取消
       </button>
     </div>
+    <button onclick="testToken()"
+      style="width:100%;background:none;border:0.5px solid var(--border);border-radius:10px;
+        color:var(--text2);font-size:14px;padding:10px;cursor:pointer;font-family:inherit">
+      🔍 測試連線
+    </button>
   </div>
 </div>
 
@@ -467,9 +473,30 @@ function setSyncStatus(state){
 
 function showTokenUI(){
   document.getElementById('tokenOverlay').style.display = 'flex';
+  const inp = document.getElementById('tokenInput');
+  if(inp) inp.value = getToken();
+  const res = document.getElementById('tokenTestResult');
+  if(res) res.textContent = '';
 }
 function hideTokenUI(){
   document.getElementById('tokenOverlay').style.display = 'none';
+}
+
+async function testToken(){
+  const t = document.getElementById('tokenInput').value.trim() || getToken();
+  const res = document.getElementById('tokenTestResult');
+  if(!t){ res.style.color='var(--text3)'; res.textContent='尚未輸入 Token'; return; }
+  res.style.color='var(--text3)'; res.textContent='測試中…';
+  try{
+    const r = await fetch('https://api.github.com/gists/' + GIST_ID, {
+      headers:{'Authorization':'token '+t}
+    });
+    if(r.ok){ res.style.color='var(--green)'; res.textContent='✅ 連線正常，Gist 可存取'; }
+    else if(r.status===401){ res.style.color='#ff6b6b'; res.textContent='❌ Token 無效或已失效'; }
+    else { res.style.color='#ff6b6b'; res.textContent='❌ 錯誤：'+r.status; }
+  }catch(e){
+    res.style.color='#ff6b6b'; res.textContent='❌ 網路錯誤';
+  }
 }
 function applyToken(){
   const t = document.getElementById('tokenInput').value.trim();
