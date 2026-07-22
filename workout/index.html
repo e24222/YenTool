@@ -211,33 +211,11 @@ main{max-width:600px;margin:0 auto;padding:16px}
 .set-action-btn:active{background:var(--bg3)}
 
 /* Ratings */
-.ratings-col{display:flex;flex-direction:column;gap:8px}
-.ratings-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.rating-summary{font-size:12px;color:var(--text2);margin-left:4px;opacity:0.8}
-.rating-item{display:flex;align-items:center;gap:8px}
-.rating-emoji{font-size:15px;width:22px;text-align:center}
-.stepper{
-  display:flex;align-items:center;
-  background:var(--bg3);border-radius:8px;
-  overflow:hidden;
-}
-.step-btn{
-  background:none;border:none;
-  color:var(--text);font-size:20px;
-  width:34px;height:34px;
-  cursor:pointer;display:flex;
-  align-items:center;justify-content:center;
-  transition:background .1s;
-}
-.step-btn:active{background:var(--border)}
-.step-val{
-  font-size:15px;font-weight:500;
-  min-width:30px;text-align:center;
-  transition:color .15s;
-}
-.sv-null{color:var(--text3)}
-.sv-best{color:var(--accent)}
-.sv-week{color:var(--green)}
+.ratings-col{display:flex;flex-direction:column;gap:6px;margin-top:2px}
+.ratings-row{display:flex;align-items:center;gap:8px}
+.rating-emoji{font-size:15px;flex-shrink:0}
+.rating-summary{font-size:13px;color:var(--text2)}
+
 
 .copy-btn{
   display:flex;align-items:center;justify-content:center;gap:8px;
@@ -589,28 +567,14 @@ function exCard(ex_, inSuper){
     <button class="set-action-btn" onclick="removeSet('${ex_.id}')">－ 減組</button>
   </div>`;
 
-  const bv = d.b, wv = d.w;
-  const sumHtml = `<span class="rating-summary" id="sum-${ex_.id}">${getSummary(ex_.id)}</span>`;
   const ratings = `<div class="ratings-col">
     <div class="ratings-row">
       <span class="rating-emoji">👍</span>
-      <div class="stepper">
-        <button class="step-btn" onclick="chR('${ex_.id}','b',-1)">−</button>
-        <span class="step-val ${bv===null?'sv-null':'sv-best'}" id="b-${ex_.id}">${bv===null?'—':bv}</span>
-        <button class="step-btn" onclick="chR('${ex_.id}','b',1)">+</button>
-      </div>
-      <span style="font-size:11px;color:var(--text3)">/10</span>
-      ${sumHtml}
+      <span class="rating-summary" id="sum-b-${ex_.id}">${getSummary(ex_.id)}</span>
     </div>
     <div class="ratings-row">
       <span class="rating-emoji">✅</span>
-      <div class="stepper">
-        <button class="step-btn" onclick="chR('${ex_.id}','w',-1)">−</button>
-        <span class="step-val ${wv===null?'sv-null':'sv-week'}" id="w-${ex_.id}">${wv===null?'—':wv}</span>
-        <button class="step-btn" onclick="chR('${ex_.id}','w',1)">+</button>
-      </div>
-      <span style="font-size:11px;color:var(--text3)">/10</span>
-      ${sumHtml}
+      <span class="rating-summary" id="sum-w-${ex_.id}">${getSummary(ex_.id)}</span>
     </div>
   </div>`;
 
@@ -690,7 +654,10 @@ function getSummary(exId){
 
 function updateSummary(exId){
   const text = getSummary(exId);
-  document.querySelectorAll('#sum-' + exId).forEach(el => el.textContent = text);
+  const b = document.getElementById('sum-b-' + exId);
+  const w = document.getElementById('sum-w-' + exId);
+  if(b) b.textContent = text;
+  if(w) w.textContent = text;
 }
 
 function addSet(exId){
@@ -718,27 +685,12 @@ function removeSet(exId){
   updateSummary(exId);
 }
 
-function chR(id, type, delta){
-  const d = S[id];
-  if(!d) return;
-  const cur = d[type] || 0;
-  const next = Math.max(0, Math.min(10, cur + delta));
-  d[type] = next === 0 ? null : next;
-  save();
-  const el = document.getElementById(type + '-' + id);
-  if(!el) return;
-  el.textContent = d[type] === null ? '—' : d[type];
-  el.className = 'step-val ' + (d[type]===null ? 'sv-null' : type==='b' ? 'sv-best' : 'sv-week');
-}
+
 
 function clearWeekRatings(){
   if(!confirm('清除所有動作的本週評分（✅）？')) return;
   Object.values(S).forEach(d => { if(d) d.w = null; });
   save();
-  document.querySelectorAll('[id^="w-"]').forEach(el => {
-    el.textContent = '—';
-    el.className = 'step-val sv-null';
-  });
   toast('本週評分已清除');
 }
 
