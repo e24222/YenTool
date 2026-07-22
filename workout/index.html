@@ -161,9 +161,26 @@ main{max-width:600px;margin:0 auto;padding:16px}
   display:flex;flex-direction:column;gap:8px;
   margin-bottom:12px;
 }
-.set-row{
-  display:flex;align-items:center;gap:6px;
+.set-row{display:flex;align-items:center;gap:6px;}
+.emoji-cell{
+  font-size:18px;cursor:pointer;padding:2px;border-radius:6px;
+  user-select:none;-webkit-user-select:none;
+  transition:background .1s;
 }
+.emoji-cell:active{background:var(--bg3)}
+.emoji-picker{
+  position:absolute;z-index:50;
+  background:var(--bg2);border:0.5px solid var(--border);
+  border-radius:12px;padding:8px;
+  display:grid;grid-template-columns:repeat(5,1fr);gap:4px;
+  box-shadow:0 8px 24px rgba(0,0,0,0.4);
+}
+.ep-opt{
+  font-size:22px;cursor:pointer;text-align:center;
+  padding:4px;border-radius:8px;
+  transition:background .1s;
+}
+.ep-opt:active{background:var(--bg3)}
 
 
 /* Shared input style */
@@ -199,6 +216,13 @@ main{max-width:600px;margin:0 auto;padding:16px}
 .rating-summary{font-size:13px;color:var(--text2)}
 
 
+.set-actions{display:flex;gap:8px;margin-bottom:4px;}
+.set-action-btn{
+  background:none;border:0.5px solid var(--border);border-radius:8px;
+  color:var(--text2);font-size:13px;padding:5px 12px;
+  cursor:pointer;font-family:inherit;transition:background .1s;
+}
+.set-action-btn:active{background:var(--bg3)}
 .copy-btn{
   display:flex;align-items:center;justify-content:center;gap:8px;
   background:none;
@@ -467,12 +491,21 @@ function applyToken(){
   loadFromGist();
 }
 
+const DEFAULT_EMOJIS = ['👍','✅','🔥','⭐','💪','🎯','📝','🏆','❤️','➕'];
+
 function exState(id, defaultSets){
   if(!S[id]) S[id] = {};
   const d = S[id];
-  // migrate old format
-  if(!d.b || typeof d.b === 'number') d.b = {wt:'', c: String(defaultSets[0]?.c||''), r: String(defaultSets[0]?.r||'')};
-  if(!d.w || typeof d.w === 'number') d.w = {wt:'', c: String(defaultSets[0]?.c||''), r: String(defaultSets[0]?.r||'')};
+  // migrate b/w format → sets array
+  if(!d.sets){
+    const bVal = (d.b && typeof d.b === 'object') ? d.b : {wt:'',c:String(defaultSets[0]?.c||''),r:String(defaultSets[0]?.r||'')};
+    const wVal = (d.w && typeof d.w === 'object') ? d.w : {wt:'',c:String(defaultSets[1]?.c||defaultSets[0]?.c||''),r:String(defaultSets[1]?.r||defaultSets[0]?.r||'')};
+    d.sets = [
+      {emoji:'👍', ...bVal},
+      {emoji:'✅', ...wVal}
+    ];
+    delete d.b; delete d.w;
+  }
   return d;
 }
 
@@ -531,24 +564,12 @@ function exCard(ex_, inSuper){
     placeholder="輸入備註..."
     oninput="setCue('${ex_.id}',this.value)">${savedCue}</textarea></div>`;
 
-  const mkRow = (type, s) => `<div class="set-row">
-    <span class="rating-emoji">${type==='b'?'👍':'✅'}</span>
-    <input class="num-input inp-weight" type="number" step="0.25" min="0"
-      inputmode="decimal" placeholder="重量" value="${s.wt}"
-      oninput="setRec('${ex_.id}','${type==='b'?'b':'w'}','wt',this.value)">
-    <span class="set-sep">kg ×</span>
-    <input class="num-input inp-sets" type="number" step="1" min="1"
-      inputmode="numeric" placeholder="組" value="${s.c}"
-      oninput="setRec('${ex_.id}','${type==='b'?'b':'w'}','c',this.value)">
-    <span class="set-sep">組</span>
-    <input class="num-input inp-reps" type="number" step="1" min="1"
-      inputmode="numeric" placeholder="下" value="${s.r}"
-      oninput="setRec('${ex_.id}','${type==='b'?'b':'w'}','r',this.value)">
-    <span class="set-sep">下</span>
-  </div>`;
-  const setsHtml = `<div class="sets-col">
-    ${mkRow('b', d.b)}
-    ${mkRow('w', d.w)}
+  let setsHtml = `<div class="sets-col" id="sets-${ex_.id}" style="position:relative">`;
+  d.sets.forEach((s, i) => { setsHtml += setRowHTML(ex_.id, i, s); });
+  setsHtml += `</div>
+  <div class="set-actions">
+    <button class="set-action-btn" onclick="addSetRow('${ex_.id}')">＋ 加組</button>
+    <button class="set-action-btn" onclick="removeSetRow('${ex_.id}')">－ 減組</button>
   </div>`;
   const ratings = '';
 
@@ -567,10 +588,78 @@ function exCard(ex_, inSuper){
   </div>`;
 }
 
-function setRec(exId, type, field, val){
-  if(!S[exId]) return;
-  S[exId][type][field] = val;
+function setRowHTML(exId, i, s){
+  return `<div class="set-row" id="sr-${exId}-${i}">
+    <span class="emoji-cell" id="ec-${exId}-${i}"
+      onclick="showEmojiPicker('${exId}',${i},this)">${s.emoji||'👍'}</span>
+    <input class="num-input inp-weight" type="number" step="0.25" min="0"
+      inputmode="decimal" placeholder="重量" value="${s.wt||''}"
+      oninput="setRowField('${exId}',${i},'wt',this.value)">
+    <span class="set-sep">kg ×</span>
+    <input class="num-input inp-sets" type="number" step="1" min="1"
+      inputmode="numeric" placeholder="組" value="${s.c||''}"
+      oninput="setRowField('${exId}',${i},'c',this.value)">
+    <span class="set-sep">組</span>
+    <input class="num-input inp-reps" type="number" step="1" min="1"
+      inputmode="numeric" placeholder="下" value="${s.r||''}"
+      oninput="setRowField('${exId}',${i},'r',this.value)">
+    <span class="set-sep">下</span>
+  </div>`;
+}
+
+function setRowField(exId, i, field, val){
+  if(!S[exId]?.sets) return;
+  S[exId].sets[i][field] = val;
   save();
+}
+
+function addSetRow(exId){
+  const d = S[exId]; if(!d) return;
+  const last = d.sets[d.sets.length-1] || {emoji:'➕',wt:'',c:'',r:''};
+  const next = DEFAULT_EMOJIS.find(e => !d.sets.some(s => s.emoji===e)) || '➕';
+  const newS = {emoji: next, wt:'', c: last.c, r: last.r};
+  d.sets.push(newS);
+  save();
+  const col = document.getElementById('sets-'+exId);
+  const div = document.createElement('div');
+  div.innerHTML = setRowHTML(exId, d.sets.length-1, newS);
+  col.appendChild(div.firstElementChild);
+}
+
+function removeSetRow(exId){
+  const d = S[exId]; if(!d || d.sets.length<=1) return;
+  d.sets.pop(); save();
+  const col = document.getElementById('sets-'+exId);
+  col.removeChild(col.lastElementChild);
+}
+
+let _pickerTarget = null;
+function showEmojiPicker(exId, i, el){
+  closeEmojiPicker();
+  const picker = document.createElement('div');
+  picker.className = 'emoji-picker';
+  picker.id = 'ep';
+  DEFAULT_EMOJIS.forEach(e => {
+    const opt = document.createElement('div');
+    opt.className = 'ep-opt'; opt.textContent = e;
+    opt.onclick = ev => { ev.stopPropagation(); pickEmoji(exId, i, e); };
+    picker.appendChild(opt);
+  });
+  el.parentElement.insertBefore(picker, el.nextSibling);
+  _pickerTarget = {exId, i};
+  setTimeout(() => document.addEventListener('click', closeEmojiPicker, {once:true}), 0);
+}
+function closeEmojiPicker(){
+  const ep = document.getElementById('ep'); if(ep) ep.remove();
+  _pickerTarget = null;
+}
+function pickEmoji(exId, i, emoji){
+  if(!S[exId]?.sets) return;
+  S[exId].sets[i].emoji = emoji;
+  save();
+  const el = document.getElementById('ec-'+exId+'-'+i);
+  if(el) el.textContent = emoji;
+  closeEmojiPicker();
 }
 
 /* ── Actions ── */
@@ -603,7 +692,7 @@ function setCue(id, val){
 
 function clearWeekRatings(){
   if(!confirm('清除所有動作的本週評分（✅）？')) return;
-  Object.values(S).forEach(d => { if(d) d.w = {wt:'',c:'',r:''}; });
+  Object.values(S).forEach(d => { if(d?.sets) d.sets.forEach(s => { s.wt=''; }); });
   save();
   toast('本週評分已清除');
 }
@@ -617,10 +706,10 @@ function copyDay(di){
   day.exercises.forEach(ex_ => {
     const d = S[ex_.id];
     t += ex_.name + '\n';
-    if(d){
-      const b = d.b || {}, w = d.w || {};
-      t += `👍 ${b.wt||'__'}kg × ${b.c||'__'}組${b.r||'__'}下\n`;
-      t += `✅ ${w.wt||'__'}kg × ${w.c||'__'}組${w.r||'__'}下\n`;
+    if(d?.sets){
+      d.sets.forEach(s => {
+        t += `${s.emoji} ${s.wt||'__'}kg × ${s.c||'__'}組${s.r||'__'}下\n`;
+      });
     }
     t += '\n';
   });
