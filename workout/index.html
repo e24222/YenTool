@@ -564,15 +564,15 @@ function exCard(ex_, inSuper){
     </div>`;
     return s;
   };
-  const copyPbBtn = `<div style="text-align:center;margin:4px 0">
+  const copyPbBtn = `<div style="display:flex;justify-content:flex-end;margin-top:8px">
     <button onclick="copyPbToWeek('${ex_.id}')"
       style="background:none;border:0.5px solid var(--border);border-radius:8px;
-        color:var(--text2);font-size:14px;padding:5px 14px;cursor:pointer;font-family:inherit;
-        transition:background .1s">
+        color:var(--text3);font-size:13px;padding:4px 12px;cursor:pointer;font-family:inherit;
+        transition:background .1s,color .1s">
       👍 → ✅
     </button>
   </div>`;
-  const setsHtml = mkSection('b', d.b) + copyPbBtn + mkSection('w', d.w);
+  const setsHtml = mkSection('b', d.b) + '<div style="height:6px"></div>' + mkSection('w', d.w) + copyPbBtn;
   const ratings = '';
 
   const cardStyle = inSuper ? 'border-radius:0;border:none;border-bottom:0.5px solid var(--border);margin-bottom:0' : '';
