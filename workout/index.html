@@ -137,6 +137,24 @@ main{max-width:600px;margin:0 auto;padding:16px}
   line-height:1.6;display:none;
 }
 .cue-text.open{display:block}
+.cue-wrap{display:none;margin-bottom:10px;}
+.cue-wrap.open{display:block}
+.cue-textarea{
+  width:100%;
+  min-height:64px;
+  background:var(--bg3);
+  border:0.5px solid var(--border);
+  border-radius:8px;
+  color:var(--text);
+  font-size:13px;
+  font-family:inherit;
+  padding:8px 10px;
+  line-height:1.6;
+  resize:vertical;
+  transition:border-color .15s;
+}
+.cue-textarea:focus{outline:none;border-color:var(--accent)}
+.cue-textarea::placeholder{color:var(--text3)}
 
 /* Sets rows */
 .sets-col{
@@ -434,8 +452,11 @@ function exCard(ex_, inSuper){
   if(ex_.isNew) badges += `<span class="badge badge-new">新增</span>`;
   if(ex_.superSet && !inSuper) badges += `<span class="badge badge-super">超級組</span>`;
 
-  const cueBtn = ex_.cue ? `<button class="cue-btn" onclick="toggleCue('c-${ex_.id}')" title="動作提示">ⓘ</button>` : '';
-  const cueDiv = ex_.cue ? `<div class="cue-text" id="c-${ex_.id}">${ex_.cue}</div>` : '';
+  const cueBtn = `<button class="cue-btn" onclick="toggleCue('c-${ex_.id}')" title="備註">ⓘ</button>`;
+  const savedCue = (S[ex_.id] && S[ex_.id].cue !== undefined) ? S[ex_.id].cue : (ex_.cue || '');
+  const cueDiv = `<div class="cue-wrap" id="c-${ex_.id}"><textarea class="cue-textarea" rows="3"
+    placeholder="輸入備註..."
+    oninput="setCue('${ex_.id}',this.value)">${savedCue}</textarea></div>`;
 
   // Sets rows
   let setsHtml = `<div class="sets-col" id="sets-${ex_.id}">`;
@@ -517,6 +538,12 @@ function switchDay(n){
 }
 
 function toggleCue(id){ document.getElementById(id).classList.toggle('open'); }
+
+function setCue(id, val){
+  if(!S[id]) S[id] = {};
+  S[id].cue = val;
+  save();
+}
 
 function setField(exId, idx, field, val){
   const d = S[exId];
