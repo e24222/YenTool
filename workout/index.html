@@ -589,15 +589,14 @@ function singleRowHTML(exId, type, i, s){
     <input class="num-input inp-weight" type="number" step="0.25" min="0"
       inputmode="decimal" placeholder="重量" value="${s.wt||''}"
       oninput="setRowField('${exId}','${type}',${i},'wt',this.value)">
-    <span class="set-sep">kg ×</span>
-    <input class="num-input inp-sets" type="number" step="1" min="1"
-      inputmode="numeric" placeholder="組" value="${s.c||''}"
-      oninput="setRowField('${exId}','${type}',${i},'c',this.value)">
-    <span class="set-sep">組</span>
+    <span class="set-sep">×</span>
     <input class="num-input inp-reps" type="number" step="1" min="1"
-      inputmode="numeric" placeholder="下" value="${s.r||''}"
+      inputmode="numeric" placeholder="次數" value="${s.r||''}"
       oninput="setRowField('${exId}','${type}',${i},'r',this.value)">
-    <span class="set-sep">下</span>
+    <span class="set-sep">×</span>
+    <input class="num-input inp-sets" type="number" step="1" min="1"
+      inputmode="numeric" placeholder="組數" value="${s.c||''}"
+      oninput="setRowField('${exId}','${type}',${i},'c',this.value)">
   </div>`;
 }
 
@@ -677,8 +676,8 @@ function copyDay(di){
     const d = S[ex_.id];
     t += ex_.name + '\n';
     if(d){
-      (d.b||[]).forEach(s => { t += `👍 ${s.wt||'__'}kg × ${s.c||'__'}組${s.r||'__'}下\n`; });
-      (d.w||[]).forEach(s => { t += `✅ ${s.wt||'__'}kg × ${s.c||'__'}組${s.r||'__'}下\n`; });
+      (d.b||[]).forEach(s => { t += `👍 ${s.wt||'__'}kg × ${s.r||'__'}次 × ${s.c||'__'}組\n`; });
+      (d.w||[]).forEach(s => { t += `✅ ${s.wt||'__'}kg × ${s.r||'__'}次 × ${s.c||'__'}組\n`; });
     }
     t += '\n';
   });
