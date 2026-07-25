@@ -1,0 +1,31 @@
+name: Sync World Gym data
+
+on:
+  schedule:
+    - cron: '0 19 * * 0'   # 每週一 03:00 台灣時間
+  workflow_dispatch: {}     # 也可手動觸發
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Sync WG data
+        run: python scripts/sync_wg.py
+      - name: Commit if changed
+        run: |
+          git config user.name "wg-sync-bot"
+          git config user.email "actions@github.com"
+          if ! git diff --quiet radar/data.json; then
+            git add radar/data.json
+            git commit -m "自動更新 World Gym 分店資料 $(date +%F)"
+            git push
+          else
+            echo "no changes"
+          fi
