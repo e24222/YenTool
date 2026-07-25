@@ -8,6 +8,8 @@
 <meta name="apple-mobile-web-app-title" content="WG&Chunithm">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#101014">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
 :root{
   --bg:#101014; --panel:#1a1a22; --panel2:#20202b;
@@ -82,14 +84,22 @@ button{cursor:pointer;border:none;border-radius:10px;font-family:inherit}
 
 <div class="searchbox">
   <div class="inputrow">
-    <input type="text" id="addr" placeholder="例:桃園市中壢區中華路二段501號" enterkeyhint="search">
+    <input type="text" id="addr" placeholder="地址 或 Plus Code(如 7QP3X8V7+64)" enterkeyhint="search">
     <button class="gobtn" id="go">查詢</button>
   </div>
   <div class="subrow">
     <button class="locbtn" id="useloc">📍 使用目前位置</button>
+    <button class="locbtn" id="pickmap">🗺 地圖上點選</button>
     <label class="toggle"><input type="checkbox" id="noexp" checked>排除 Express 店(無淋浴)</label>
   </div>
   <div class="status" id="status"></div>
+  <div id="mapwrap" style="display:none;margin-top:12px">
+    <div id="pickmap-el" style="height:300px;border-radius:12px;overflow:hidden;border:1px solid var(--line)"></div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="gobtn" id="mapconfirm" style="flex:1;background:var(--mai);color:#fff" disabled>在地圖上點一下要查詢的位置</button>
+      <button class="locbtn" id="mapcancel">取消</button>
+    </div>
+  </div>
 </div>
 
 <div id="results">
@@ -107,7 +117,7 @@ button{cursor:pointer;border:none;border-radius:10px;font-family:inherit}
 </div>
 
 <div class="note"><div id="upd" style="margin-bottom:6px"></div>
-  資料來源:World Gym 官網(140 間)與 Music Game Map 音Game地圖社群資料(63 廳/168 台)與 maimai(119 廳,2026/07)。機廳附台數與營業時間,機況以現場為準。距離為直線距離,實際路程會略多。地址查詢使用 OpenStreetMap,輸入越完整越準。
+  資料來源:World Gym 官網(140 間)與 Music Game Map 音Game地圖社群資料(63 廳/168 台)與 maimai(119 廳,2026/07)。機廳附台數與營業時間,機況以現場為準。距離為直線距離,實際路程會略多。<br><b>最準的查法:</b>到 Google Maps 找到你的位置 → 長按大頭針 → 複製顯示的 Plus Code(例如 7QP3X8V7+64)→ 貼到查詢欄,系統會直接本地解碼,不用連網查地址、不受台灣門牌資料庫不全影響,100% 精準。地址文字查詢用 OpenStreetMap,台灣門牌收錄不齊,查不到時會自動開地圖點選保底。
 </div>
 </div>
 <script>
@@ -196,7 +206,183 @@ function search(lat,lng,label){
   $('results').classList.add('show');
 }
 
-async function geocode(q){
+// 逐步簡化地址,產生一連串候選查詢字串(完整地址查不到時往下試)
+function addrCandidates(q){
+  const list=[q];
+  // 去掉樓層/室(3F、2樓、之1)
+  let noFloor=q.replace(/[\dA-Za-z]*[樓Ff](之\d+)?$|之\d+$/,'').trim();
+  if(noFloor&&!list.includes(noFloor))list.push(noFloor);
+  // 去掉門牌號,只留路名(到「號」為止全部砍掉)
+  let noNum=q.replace(/\d+(之\d+)?(-\d+)?號.*$/,'').trim();
+  if(noNum&&!list.includes(noNum))list.push(noNum);
+  // 去掉巷弄,只留路段
+  let roadOnly=noNum.replace(/\d+(巷|弄)$/,'').trim();
+  if(roadOnly&&!list.includes(roadOnly))list.push(roadOnly);
+  return list.filter(Boolean);
+}
+
+// Open Location Code (Plus Code) 解碼/短碼還原
+// 依 Google 公開的 Open Location Code 技術規格獨立實作(演算法為公開規格,非複製受著作權保護的原始碼)
+// 規格參考: https://github.com/google/open-location-code (Apache-2.0,規格本身為公開演算法)
+const OLC = (() => {
+  const ALPHABET = '23456789CFGHJMPQRVWX';
+  const BASE = ALPHABET.length; // 20
+  const SEP = '+';
+  const SEP_POS = 8;
+  const PAD = '0';
+  const LAT_MAX = 90, LON_MAX = 180;
+  const PAIR_LEN = 10;
+  const GRID_COLS = 4, GRID_ROWS = 5;
+  const MAX_DIGITS = 15;
+  const GRID_LEN = MAX_DIGITS - PAIR_LEN; // 5
+  const PAIR_FIRST_PV = Math.pow(BASE, PAIR_LEN/2 - 1); // 20^4
+  const PAIR_PRECISION = Math.pow(BASE, 3); // 8000
+  const GRID_LAT_FIRST_PV = Math.pow(GRID_ROWS, GRID_LEN - 1); // 5^4
+  const GRID_LNG_FIRST_PV = Math.pow(GRID_COLS, GRID_LEN - 1); // 4^4
+  const FINAL_LAT_PRECISION = PAIR_PRECISION * Math.pow(GRID_ROWS, MAX_DIGITS - PAIR_LEN);
+  const FINAL_LNG_PRECISION = PAIR_PRECISION * Math.pow(GRID_COLS, MAX_DIGITS - PAIR_LEN);
+
+  function clipLat(lat){ return Math.min(Math.max(lat, -LAT_MAX), LAT_MAX); }
+  function normLon(lon){ let v=lon; while(v<-LON_MAX)v+=360; while(v>=LON_MAX)v-=360; return v; }
+
+  function isValid(code){
+    if(typeof code!=='string' || !code) return false;
+    const sepCount=(code.match(/\+/g)||[]).length;
+    if(sepCount!==1) return false;
+    if(code.length===1) return false;
+    const sep=code.indexOf(SEP);
+    if(sep===-1||sep>SEP_POS||sep%2===1) return false;
+    const pad=code.indexOf(PAD);
+    if(pad!==-1){
+      if(sep<SEP_POS) return false;
+      if(pad===0) return false;
+      const rpad=code.lastIndexOf(PAD)+1;
+      const pads=code.slice(pad,rpad);
+      if(pads.length%2===1 || [...pads].some(c=>c!==PAD)) return false;
+      if(!code.endsWith(SEP)) return false;
+    }
+    if(code.length-sep-1===1) return false;
+    for(const ch of code){
+      if(ch!==SEP && ch!==PAD && ALPHABET.indexOf(ch.toUpperCase())===-1) return false;
+    }
+    return true;
+  }
+  function isShort(code){
+    if(!isValid(code)) return false;
+    const sep=code.indexOf(SEP);
+    return sep>=0 && sep<SEP_POS;
+  }
+  function isFull(code){
+    if(!isValid(code)) return false;
+    if(isShort(code)) return false;
+    const firstLat=ALPHABET.indexOf(code[0].toUpperCase())*BASE;
+    if(firstLat>=LAT_MAX*2) return false;
+    if(code.length>1){
+      const firstLon=ALPHABET.indexOf(code[1].toUpperCase())*BASE;
+      if(firstLon>=LON_MAX*2) return false;
+    }
+    return true;
+  }
+
+  function decode(codeIn){
+    if(!isFull(codeIn)) throw new Error('不是有效的完整 Plus Code: '+codeIn);
+    let code = codeIn.replace(/[+0]/g,'').toUpperCase().slice(0, MAX_DIGITS);
+    let normalLat = -LAT_MAX * PAIR_PRECISION;
+    let normalLng = -LON_MAX * PAIR_PRECISION;
+    let gridLat = 0, gridLng = 0;
+    const digits = Math.min(code.length, PAIR_LEN);
+    let pv = PAIR_FIRST_PV;
+    for(let i=0;i<digits;i+=2){
+      normalLat += ALPHABET.indexOf(code[i]) * pv;
+      normalLng += ALPHABET.indexOf(code[i+1]) * pv;
+      if(i < digits-2) pv = Math.floor(pv/BASE);
+    }
+    let latPrecision = pv / PAIR_PRECISION;
+    let lngPrecision = pv / PAIR_PRECISION;
+    if(code.length > PAIR_LEN){
+      let rowpv = GRID_LAT_FIRST_PV, colpv = GRID_LNG_FIRST_PV;
+      const d2 = Math.min(code.length, MAX_DIGITS);
+      for(let i=PAIR_LEN;i<d2;i++){
+        const val = ALPHABET.indexOf(code[i]);
+        const row = Math.floor(val/GRID_COLS), col = val%GRID_COLS;
+        gridLat += row*rowpv; gridLng += col*colpv;
+        if(i < d2-1){ rowpv=Math.floor(rowpv/GRID_ROWS); colpv=Math.floor(colpv/GRID_COLS); }
+      }
+      latPrecision = rowpv / FINAL_LAT_PRECISION;
+      lngPrecision = colpv / FINAL_LNG_PRECISION;
+    }
+    const lat = normalLat/PAIR_PRECISION + gridLat/FINAL_LAT_PRECISION;
+    const lng = normalLng/PAIR_PRECISION + gridLng/FINAL_LNG_PRECISION;
+    return {
+      latCenter: round14(lat + latPrecision/2),
+      lngCenter: round14(lng + lngPrecision/2),
+      latLo: round14(lat), lngLo: round14(lng),
+      latHi: round14(lat+latPrecision), lngHi: round14(lng+lngPrecision)
+    };
+  }
+  function round14(v){ return Math.round(v*1e14)/1e14; }
+
+  function encode(latitude, longitude, codeLength){
+    codeLength = codeLength || PAIR_LEN;
+    if(codeLength<2 || (codeLength<PAIR_LEN && codeLength%2===1)) throw new Error('Invalid Open Location Code length');
+    codeLength = Math.min(codeLength, MAX_DIGITS);
+    latitude = clipLat(latitude); longitude = normLon(longitude);
+    if(latitude===90) latitude = latitude - 1e-9;
+    let code='';
+    let latVal = Math.round((latitude+LAT_MAX) * FINAL_LAT_PRECISION);
+    let lngVal = Math.round((longitude+LON_MAX) * FINAL_LNG_PRECISION);
+    if(codeLength > PAIR_LEN){
+      for(let i=0;i<MAX_DIGITS-PAIR_LEN;i++){
+        const latDigit = latVal % GRID_ROWS;
+        const lngDigit = lngVal % GRID_COLS;
+        const ndx = latDigit*GRID_COLS + lngDigit;
+        code = ALPHABET[ndx] + code;
+        latVal = Math.floor(latVal/GRID_ROWS);
+        lngVal = Math.floor(lngVal/GRID_COLS);
+      }
+    } else {
+      latVal = Math.floor(latVal / Math.pow(GRID_ROWS, GRID_LEN));
+      lngVal = Math.floor(lngVal / Math.pow(GRID_COLS, GRID_LEN));
+    }
+    for(let i=0;i<PAIR_LEN/2;i++){
+      code = ALPHABET[lngVal % BASE] + code;
+      code = ALPHABET[latVal % BASE] + code;
+      latVal = Math.floor(latVal/BASE);
+      lngVal = Math.floor(lngVal/BASE);
+    }
+    code = code.slice(0,SEP_POS) + SEP + code.slice(SEP_POS);
+    if(codeLength >= SEP_POS) return code.slice(0, codeLength+1);
+    return code.slice(0,codeLength) + PAD.repeat(SEP_POS-codeLength) + SEP;
+  }
+
+  function recoverNearest(shortCode, refLat, refLon){
+    if(isFull(shortCode)) return shortCode.toUpperCase();
+    if(!isShort(shortCode)) throw new Error('不是有效的短碼: '+shortCode);
+    refLat = clipLat(refLat); refLon = normLon(refLon);
+    const code = shortCode.toUpperCase();
+    const sep = code.indexOf(SEP);
+    const paddingLength = SEP_POS - sep;
+    const resolution = Math.pow(20, 2 - paddingLength/2);
+    const half = resolution/2;
+    const refCode = encode(refLat, refLon, PAIR_LEN);
+    let codeArea = decode(refCode.slice(0, paddingLength) + code);
+    let lat = codeArea.latCenter, lng = codeArea.lngCenter;
+    if(refLat + half < lat && lat - resolution >= -LAT_MAX) lat -= resolution;
+    else if(refLat - half > lat && lat + resolution <= LAT_MAX) lat += resolution;
+    if(refLon + half < lng) lng -= resolution;
+    else if(refLon - half > lng) lng += resolution;
+    return encode(lat, lng, code.replace(/[+0]/g,'').length <= 4 ? PAIR_LEN : code.replace(/[+0]/g,'').length + paddingLength);
+  }
+
+  // 判斷輸入字串是否「看起來像」Plus Code(含短碼,如 "7PJJ+2W 桃園市")
+  function looksLikePlusCode(s){
+    return /[23456789CFGHJMPQRVWX]{2,8}\+[23456789CFGHJMPQRVWX]{0,7}/i.test(s.trim());
+  }
+
+  return { decode, encode, recoverNearest, isFull, isShort, isValid, looksLikePlusCode };
+})();
+
+async function geocodeOnce(q){
   const url='https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=tw&accept-language=zh-TW&q='+encodeURIComponent(q);
   const r=await fetch(url,{headers:{'Accept':'application/json'}});
   if(!r.ok)throw new Error('http '+r.status);
@@ -205,19 +391,80 @@ async function geocode(q){
   return {lat:+j[0].lat,lng:+j[0].lon,name:j[0].display_name};
 }
 
+async function geocode(q){
+  for(const c of addrCandidates(q)){
+    const g=await geocodeOnce(c);
+    if(g)return {...g, approx:c!==q};
+  }
+  return null;
+}
+
+// 嘗試把輸入內容當作 Plus Code 處理(本地解碼,不連網、瞬間出結果、精度最高)
+// 支援「完整碼」(如 7QP3X8V7+64)與「短碼+地區」(如 7PJJ+2W 桃園市)兩種常見的 Google Maps 分享格式
+async function tryPlusCode(q){
+  const m = q.match(/([23456789CFGHJMPQRVWX]{4,8}\+[23456789CFGHJMPQRVWX]{0,7})/i);
+  if(!m) return null;
+  const code = m[1].toUpperCase();
+  if(!OLC.isValid(code)) return null;
+  const rest = (q.slice(0,m.index)+q.slice(m.index+m[1].length)).trim();
+  if(OLC.isFull(code)){
+    const d = OLC.decode(code);
+    return {lat:d.latCenter, lng:d.lngCenter, name:'Plus Code '+code+'(本地解碼,無需連網)'};
+  }
+  // 短碼需要一個大概的參考地區才能還原成完整碼
+  let ref=null;
+  if(rest){
+    const g = await geocodeOnce(rest) || await geocodeOnce(rest+' 台灣');
+    if(g) ref={lat:g.lat,lng:g.lng};
+  }
+  if(!ref && lastPos) ref=lastPos;
+  if(!ref){ const err=new Error('short-no-ref'); err.plusShortNoRef=true; throw err; }
+  const full = OLC.recoverNearest(code, ref.lat, ref.lng);
+  const d = OLC.decode(full);
+  return {lat:d.latCenter, lng:d.lngCenter, name:'Plus Code '+full+'(依「'+(rest||'目前位置附近')+'」還原)'};
+}
+
 async function run(){
   const q=$('addr').value.trim();
   if(!q){$('status').textContent='請先輸入地址';$('status').className='status err';return;}
   $('go').disabled=true;
   $('status').textContent='定位中…';$('status').className='status';
   try{
+    // 優先判斷是否為 Plus Code(本地解碼,精度最高、不受台灣門牌資料不全影響)
+    let pc=null;
+    try{ pc = await tryPlusCode(q); }
+    catch(e){
+      if(e && e.plusShortNoRef){
+        $('status').textContent='這是短版 Plus Code,需要大概地區才能還原,請在後面加城市/區名(例:7PJJ+2W 桃園市),或改貼完整版 Plus Code';
+        $('status').className='status err';
+        $('go').disabled=false; return;
+      }
+    }
+    if(pc){
+      $('status').textContent='✓ Plus Code 精準解碼完成';
+      $('status').className='status';
+      search(pc.lat, pc.lng, pc.name);
+      $('go').disabled=false; return;
+    }
     let g=await geocode(q);
     if(!g&&!/台灣|Taiwan/.test(q))g=await geocode(q+' 台灣');
-    if(!g){$('status').textContent='找不到這個地址,試著加上縣市或簡化門牌';$('status').className='status err';}
-    else{$('status').textContent='';search(g.lat,g.lng,g.name);}
+    if(!g){
+      $('status').textContent='這個門牌沒有被地圖資料庫收錄(台灣地址常見狀況),已自動開地圖 — 點一下你的位置就好,或改貼 Google Maps 的 Plus Code';
+      $('status').className='status err';
+      openPickMap();
+    }else if(g.approx){
+      $('status').textContent='⚠ 門牌未收錄,已定位到最近路段,誤差可能較大 — 點一下地圖上正確位置校正,或改貼 Plus Code 更準';
+      $('status').className='status';
+      openPickMap([g.lat,g.lng], 17);
+      search(g.lat,g.lng,g.name);
+    }else{
+      $('status').textContent='';
+      search(g.lat,g.lng,g.name);
+    }
   }catch(e){
-    $('status').textContent='地址查詢服務暫時無法連線,請稍後再試,或改用「使用目前位置」';
+    $('status').textContent='地址查詢服務暫時無法連線,已自動開地圖 — 點一下你的位置就好,或改貼 Plus Code';
     $('status').className='status err';
+    openPickMap();
   }
   $('go').disabled=false;
 }
@@ -245,6 +492,51 @@ function locate(auto){
 $('useloc').onclick=()=>locate(false);
 // 開啟頁面時自動嘗試定位
 window.addEventListener('load',()=>locate(true));
+
+// ---- 地圖上點選(保證找得到,不依賴地址資料庫) ----
+let pickLeaflet=null, pickMarker=null, pickedLatLng=null;
+function openPickMap(centerOverride, zoomOverride){
+  $('mapwrap').style.display='block';
+  const center = centerOverride || (lastPos ? [lastPos.lat,lastPos.lng] : [23.9738,120.9820]); // 預設台灣中心
+  const zoom = zoomOverride || (lastPos||centerOverride ? 15 : 8);
+  if(!pickLeaflet){
+    pickLeaflet=L.map('pickmap-el').setView(center, zoom);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+      attribution:'© OpenStreetMap', maxZoom:19
+    }).addTo(pickLeaflet);
+    pickLeaflet.on('click', e=>{
+      pickedLatLng = e.latlng;
+      if(pickMarker) pickMarker.setLatLng(e.latlng);
+      else pickMarker = L.marker(e.latlng).addTo(pickLeaflet);
+      const btn=$('mapconfirm');
+      btn.disabled=false;
+      btn.textContent='✓ 查詢這個位置 ('+e.latlng.lat.toFixed(4)+', '+e.latlng.lng.toFixed(4)+')';
+    });
+  }else{
+    pickLeaflet.setView(center, zoom);
+    setTimeout(()=>pickLeaflet.invalidateSize(), 50);
+  }
+  // 若是自動帶入的猜測位置,先放一個可拖曳的標記讓使用者微調
+  if(centerOverride){
+    pickedLatLng = L.latLng(centerOverride[0], centerOverride[1]);
+    if(pickMarker) pickMarker.setLatLng(pickedLatLng).options.draggable=true;
+    else pickMarker = L.marker(pickedLatLng,{draggable:true}).addTo(pickLeaflet);
+    pickMarker.dragging&&pickMarker.dragging.enable();
+    pickMarker.on('dragend', ()=>{
+      pickedLatLng = pickMarker.getLatLng();
+      $('mapconfirm').textContent='✓ 查詢這個位置 ('+pickedLatLng.lat.toFixed(4)+', '+pickedLatLng.lng.toFixed(4)+')';
+    });
+    $('mapconfirm').disabled=false;
+    $('mapconfirm').textContent='✓ 查詢這個位置(可拖曳標記微調)';
+  }
+}
+$('pickmap').onclick=()=>openPickMap();
+$('mapcancel').onclick=()=>{ $('mapwrap').style.display='none'; };
+$('mapconfirm').onclick=()=>{
+  if(!pickedLatLng)return;
+  $('mapwrap').style.display='none';
+  search(pickedLatLng.lat, pickedLatLng.lng, '地圖選點 ('+pickedLatLng.lat.toFixed(4)+', '+pickedLatLng.lng.toFixed(4)+')');
+};
 </script>
 </body>
 </html>
