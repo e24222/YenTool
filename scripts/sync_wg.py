@@ -11,7 +11,7 @@ BASE = 'https://www.worldgymtaiwan.com'
 
 # 官網座標錯誤的人工修正(以 Google Maps 實際位置為準)
 COORD_FIXES = {
-    'new-taipei-fuzhong': (25.0078573, 121.4601879),  # 官網地圖連結座標錯誤(經度差7.6km),人工修正
+    'new-taipei-banqiao-fuzhong': (25.0078573, 121.4601879),  # 官網地圖連結座標錯誤(經度差7.6km),人工修正
     'chiayi-xingye': (23.4695983, 120.4340771),
     'kaohsiung-boai': (22.6636463, 120.3035812),
     'new-taipei-xike': (25.0619144, 121.6470307),
