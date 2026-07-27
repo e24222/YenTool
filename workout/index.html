@@ -354,8 +354,11 @@ const DAYS = [
       {id:'ub1', name:'坐姿划船',
         cue:'收肩完再拉，頂點停頓',
         defaultSets:[{c:1,r:12},{c:2,r:12}]},
-      {id:'ub2', name:'正握滑輪下拉',
+      {id:'ub2', name:'正握滑輪下拉', altSet:true,
         cue:'吸氣拉把，收肩抬頭，手肘用力帶到口袋，到底停頓',
+        defaultSets:[{c:1,r:12},{c:2,r:12}]},
+      {id:'ub2b', name:'輔助引體向上', altSet:true,
+        cue:'正握；確認是闊背往下帶動手臂，不是手臂硬拉；長期目標是減少輔助重量',
         defaultSets:[{c:1,r:12},{c:2,r:12}]},
       {id:'ub3', name:'機械側平舉（黑門）',
         cue:'椅高7', superSet:true,
@@ -552,10 +555,19 @@ function build(){
       if(skip){ skip=false; return; }
       const next = day.exercises[j+1];
       const isSuperPair = ex_.superSet && next && next.superSet;
+      const isAltPair = ex_.altSet && next && next.altSet;
       if(isSuperPair){
         html += `<div style="border:1px solid rgba(191,90,242,0.25);border-radius:var(--radius);overflow:hidden;margin-bottom:10px;">
           <div style="padding:5px 12px;font-size:11px;color:var(--purple);background:rgba(191,90,242,0.08)">⚡ 超級組 — 兩個動作背靠背連做，組間才休息</div>
           ${exCard(ex_, true)}
+          ${exCard(next, true)}
+        </div>`;
+        skip = true;
+      } else if(isAltPair){
+        html += `<div style="border:1px solid rgba(240,160,48,0.25);border-radius:var(--radius);overflow:hidden;margin-bottom:10px;">
+          <div style="padding:5px 12px;font-size:11px;color:var(--accent);background:rgba(240,160,48,0.08)">🔀 二擇一 — 根據當天狀況選一個做</div>
+          ${exCard(ex_, true)}
+          <div style="text-align:center;padding:6px;font-size:12px;color:var(--text3);background:var(--bg3);border-top:0.5px solid var(--border);border-bottom:0.5px solid var(--border)">或</div>
           ${exCard(next, true)}
         </div>`;
         skip = true;
@@ -576,6 +588,7 @@ function exCard(ex_, inSuper){
   let badges = '';
   if(ex_.isNew) badges += `<span class="badge badge-new">新增</span>`;
   if(ex_.superSet && !inSuper) badges += `<span class="badge badge-super">超級組</span>`;
+  if(ex_.altSet && !inSuper) badges += `<span class="badge" style="background:rgba(240,160,48,0.15);color:var(--accent)">二擇一</span>`;
 
   const cueBtn = `<button class="cue-btn" onclick="toggleCue('c-${ex_.id}')" title="備註">ⓘ</button>`;
   const savedCue = (S[ex_.id] && S[ex_.id].cue !== undefined) ? S[ex_.id].cue : (ex_.cue || '');
