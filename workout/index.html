@@ -128,12 +128,15 @@ main{padding:12px}
 .badge-super{background:rgba(191,90,242,0.15);color:var(--purple)}
 .cue-btn{
   background:none;border:none;
-  color:var(--accent);font-size:20px;
-  cursor:pointer;padding:0;
+  color:var(--accent);font-size:22px;
+  cursor:pointer;padding:8px;
   flex-shrink:0;line-height:1;
-  transition:color .15s;
+  min-width:44px;min-height:44px;
+  display:flex;align-items:center;justify-content:center;
+  border-radius:10px;
+  transition:background .1s,color .15s;
 }
-.cue-btn:active{color:var(--text)}
+.cue-btn:active{background:var(--bg3);color:var(--text)}
 .cue-text{
   font-size:16px;color:var(--text2);
   background:var(--bg3);border-radius:8px;
@@ -638,7 +641,7 @@ function exCard(ex_, inSuper){
         <div class="ex-name">${ex_.name}</div>
         ${badges ? `<div class="badge-row">${badges}</div>` : ''}
       </div>
-      <div style="display:flex;gap:6px;flex-shrink:0">${histBtn}${cueBtn}</div>
+      <div style="display:flex;gap:14px;flex-shrink:0">${histBtn}${cueBtn}</div>
     </div>
     ${cueDiv}
     ${setsHtml}
