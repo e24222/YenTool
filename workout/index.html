@@ -128,19 +128,19 @@ main{padding:12px}
 .badge-super{background:rgba(191,90,242,0.15);color:var(--purple)}
 
 .cue-line{
-  font-size:14px;color:var(--text3);
-  margin-top:5px;line-height:1.5;
+  font-size:16px;color:var(--text2);
+  margin-top:5px;line-height:1.55;
   cursor:pointer;
 }
-.cue-line:active{color:var(--text2)}
-.cue-line.empty{font-style:italic}
+.cue-line:active{color:var(--text)}
+.cue-line.empty{font-style:italic;color:var(--text3)}
 .cue-textarea{
   width:100%;
   background:var(--bg3);
   border:0.5px solid var(--border);
   border-radius:8px;
   color:var(--text);
-  font-size:15px;
+  font-size:16px;
   font-family:inherit;
   padding:9px 10px;
   line-height:1.55;
@@ -154,16 +154,16 @@ main{padding:12px}
 .hist-link{
   background:none;border:none;
   color:var(--text3);
-  font-size:14px;
   cursor:pointer;
-  padding:6px 2px 6px 10px;
-  white-space:nowrap;
+  padding:6px;
+  width:40px;height:40px;
+  display:flex;align-items:center;justify-content:center;
   flex-shrink:0;
-  font-family:inherit;
-  transition:color .12s;
+  border-radius:10px;
+  transition:background .12s,color .12s;
 }
-.hist-link:active{color:var(--accent)}
-.hist-link svg{width:13px;height:13px;vertical-align:-1px;margin-left:1px}
+.hist-link:active{background:var(--bg3);color:var(--accent)}
+.hist-link svg{width:24px;height:24px}
 
 
 /* Sets rows */
@@ -612,7 +612,7 @@ function exCard(ex_, inSuper){
   if(ex_.superSet && !inSuper) badges += `<span class="badge badge-super">超級組</span>`;
   if(ex_.altSet && !inSuper) badges += `<span class="badge" style="background:rgba(240,160,48,0.15);color:var(--accent)">二擇一</span>`;
 
-  const histLink = `<button class="hist-link" onclick="showHistory('${ex_.id}','${ex_.name.replace(/'/g,"\\'")}')">走勢<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>`;
+  const histLink = `<button class="hist-link" onclick="showHistory('${ex_.id}','${ex_.name.replace(/'/g,"\\'")}')" aria-label="查看歷史走勢"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 6"/><polyline points="15 6 21 6 21 12"/></svg></button>`;
 
   const savedCue = (S[ex_.id] && S[ex_.id].cue !== undefined) ? S[ex_.id].cue : (ex_.cue || '');
   const cueLine = savedCue
