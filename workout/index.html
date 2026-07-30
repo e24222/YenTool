@@ -153,16 +153,16 @@ main{padding:12px}
 
 .hist-link{
   background:none;border:none;
-  color:var(--text3);
+  color:var(--green);
   cursor:pointer;
   padding:6px;
   width:40px;height:40px;
   display:flex;align-items:center;justify-content:center;
   flex-shrink:0;
   border-radius:10px;
-  transition:background .12s,color .12s;
+  transition:background .12s,opacity .12s;
 }
-.hist-link:active{background:var(--bg3);color:var(--green)}
+.hist-link:active{background:var(--bg3);opacity:0.7}
 .hist-link svg{width:24px;height:24px}
 
 
@@ -862,7 +862,7 @@ function renderHistoryChart(history){
     return {x, y, score: item.score, date: item.date};
   });
   const pathD = pts.map((p,i) => (i===0?'M':'L') + p.x.toFixed(1) + ',' + p.y.toFixed(1)).join(' ');
-  const dots = pts.map(p => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.5" fill="var(--green)"/>`).join('');
+  const dots = pts.map(p => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.5" fill="var(--accent)"/>`).join('');
   const latest = pts[pts.length-1];
   const first = pts[0];
   const trend = Math.round((latest.score - first.score) * 10) / 10;
@@ -870,7 +870,7 @@ function renderHistoryChart(history){
   const trendSign = trend > 0 ? '+' : '';
   wrap.innerHTML = `
     <svg width="100%" viewBox="0 0 ${W} ${H}" style="display:block;overflow:visible">
-      <path d="${pathD}" fill="none" stroke="var(--green)" stroke-width="2"/>
+      <path d="${pathD}" fill="none" stroke="var(--accent)" stroke-width="2"/>
       ${dots}
     </svg>
     <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--text3);margin-top:6px">
