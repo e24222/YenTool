@@ -408,6 +408,9 @@ const DAYS = [
   }
 ];
 
+const EX_DEFAULT_CUE = {};
+DAYS.forEach(day => day.exercises.forEach(ex_ => { EX_DEFAULT_CUE[ex_.id] = ex_.cue || ''; }));
+
 /* ── State ──
   S[exId] = {
     b: null|0-10,      // best feel rating
@@ -738,11 +741,12 @@ function switchDay(n){
 function editCue(exId){
   const el = document.getElementById('cueline-' + exId);
   if(!el || el.querySelector('textarea')) return;
-  const current = (S[exId] && S[exId].cue !== undefined) ? S[exId].cue : '';
+  const current = (S[exId] && S[exId].cue !== undefined) ? S[exId].cue : (EX_DEFAULT_CUE[exId] || '');
   el.classList.remove('empty');
   el.innerHTML = `<textarea class="cue-textarea" rows="2" placeholder="輸入備註...">${current.replace(/</g,'&lt;')}</textarea>`;
   const ta = el.querySelector('textarea');
   ta.focus();
+  ta.setSelectionRange(ta.value.length, ta.value.length);
   ta.addEventListener('click', e => e.stopPropagation());
   ta.addEventListener('blur', () => {
     const val = ta.value.trim();
