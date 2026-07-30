@@ -126,50 +126,45 @@ main{padding:12px}
 .badge{font-size:14px;padding:3px 10px;border-radius:20px}
 .badge-new{background:rgba(52,199,89,0.15);color:var(--green)}
 .badge-super{background:rgba(191,90,242,0.15);color:var(--purple)}
-.ex-actions{
-  display:flex;gap:2px;flex-shrink:0;
-  background:var(--bg3);
-  border:0.5px solid var(--border);
-  border-radius:12px;
-  padding:2px;
-}
-.ex-action-btn{
-  background:none;border:none;
-  color:var(--text3);
+
+.cue-line{
+  font-size:14px;color:var(--text3);
+  margin-top:5px;line-height:1.5;
   cursor:pointer;
-  width:40px;height:40px;
-  display:flex;align-items:center;justify-content:center;
-  border-radius:10px;
-  transition:background .12s,color .12s;
 }
-.ex-action-btn svg{width:19px;height:19px}
-.ex-action-btn:active{background:var(--bg2);color:var(--accent)}
-.ex-action-btn.cue-open{color:var(--accent);background:var(--bg2)}
-.cue-text{
-  font-size:16px;color:var(--text2);
-  background:var(--bg3);border-radius:8px;
-  padding:8px 10px;margin-bottom:10px;
-  line-height:1.6;display:none;
-}
-.cue-text.open{display:block}
-.cue-wrap{display:none;margin-bottom:10px;}
-.cue-wrap.open{display:block}
+.cue-line:active{color:var(--text2)}
+.cue-line.empty{font-style:italic}
 .cue-textarea{
   width:100%;
-  min-height:64px;
   background:var(--bg3);
   border:0.5px solid var(--border);
   border-radius:8px;
   color:var(--text);
-  font-size:20px;
+  font-size:15px;
   font-family:inherit;
-  padding:10px 12px;
-  line-height:1.6;
+  padding:9px 10px;
+  line-height:1.55;
   resize:vertical;
+  margin-top:5px;
   transition:border-color .15s;
 }
 .cue-textarea:focus{outline:none;border-color:var(--accent)}
 .cue-textarea::placeholder{color:var(--text3)}
+
+.hist-link{
+  background:none;border:none;
+  color:var(--text3);
+  font-size:14px;
+  cursor:pointer;
+  padding:6px 2px 6px 10px;
+  white-space:nowrap;
+  flex-shrink:0;
+  font-family:inherit;
+  transition:color .12s;
+}
+.hist-link:active{color:var(--accent)}
+.hist-link svg{width:13px;height:13px;vertical-align:-1px;margin-left:1px}
+
 
 /* Sets rows */
 .sets-col{
@@ -614,23 +609,12 @@ function exCard(ex_, inSuper){
   if(ex_.superSet && !inSuper) badges += `<span class="badge badge-super">超級組</span>`;
   if(ex_.altSet && !inSuper) badges += `<span class="badge" style="background:rgba(240,160,48,0.15);color:var(--accent)">二擇一</span>`;
 
-  const cueBtn = `<button class="ex-action-btn" id="cuebtn-${ex_.id}" onclick="toggleCue('${ex_.id}')" aria-label="動作備註">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="12" cy="12" r="9"></circle>
-      <line x1="12" y1="11" x2="12" y2="16.5"></line>
-      <circle cx="12" cy="7.8" r="1.1" fill="currentColor" stroke="none"></circle>
-    </svg>
-  </button>`;
-  const histBtn = `<button class="ex-action-btn" onclick="showHistory('${ex_.id}','${ex_.name.replace(/'/g,"\\'")}')" aria-label="歷史走勢">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <polyline points="3 16 9 10 13.5 14.5 21 6"></polyline>
-      <polyline points="14.5 6 21 6 21 12.5"></polyline>
-    </svg>
-  </button>`;
+  const histLink = `<button class="hist-link" onclick="showHistory('${ex_.id}','${ex_.name.replace(/'/g,"\\'")}')">走勢<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>`;
+
   const savedCue = (S[ex_.id] && S[ex_.id].cue !== undefined) ? S[ex_.id].cue : (ex_.cue || '');
-  const cueDiv = `<div class="cue-wrap" id="c-${ex_.id}"><textarea class="cue-textarea" rows="3"
-    placeholder="輸入備註..."
-    oninput="setCue('${ex_.id}',this.value)">${savedCue}</textarea></div>`;
+  const cueLine = savedCue
+    ? `<div class="cue-line" id="cueline-${ex_.id}" onclick="editCue('${ex_.id}')">${escapeHtml(savedCue)}</div>`
+    : `<div class="cue-line empty" id="cueline-${ex_.id}" onclick="editCue('${ex_.id}')">＋ 加動作備註</div>`;
 
   const mkSection = (type, arr) => {
     const emoji = type==='b'?'👍':'✅';
@@ -651,21 +635,23 @@ function exCard(ex_, inSuper){
     </button>
   </div>`;
   const setsHtml = mkSection('b', d.b) + '<div style="height:6px"></div>' + mkSection('w', d.w) + copyPbBtn;
-  const ratings = '';
 
   const cardStyle = inSuper ? 'border-radius:0;border:none;border-bottom:0.5px solid var(--border);margin-bottom:0' : '';
   return `<div class="ex-card" style="${cardStyle}">
     <div class="ex-header">
-      <div>
+      <div style="flex:1;min-width:0">
         <div class="ex-name">${ex_.name}</div>
         ${badges ? `<div class="badge-row">${badges}</div>` : ''}
+        ${cueLine}
       </div>
-      <div class="ex-actions">${histBtn}${cueBtn}</div>
+      ${histLink}
     </div>
-    ${cueDiv}
     ${setsHtml}
-    ${ratings}
   </div>`;
+}
+
+function escapeHtml(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 function singleRowHTML(exId, type, i, s){
@@ -749,11 +735,21 @@ function switchDay(n){
   if(sub) sub.textContent = DAYS[n].sublabel;
 }
 
-function toggleCue(exId){
-  const div = document.getElementById('c-' + exId);
-  const btn = document.getElementById('cuebtn-' + exId);
-  const isOpen = div.classList.toggle('open');
-  if(btn) btn.classList.toggle('cue-open', isOpen);
+function editCue(exId){
+  const el = document.getElementById('cueline-' + exId);
+  if(!el || el.querySelector('textarea')) return;
+  const current = (S[exId] && S[exId].cue !== undefined) ? S[exId].cue : '';
+  el.classList.remove('empty');
+  el.innerHTML = `<textarea class="cue-textarea" rows="2" placeholder="輸入備註...">${current.replace(/</g,'&lt;')}</textarea>`;
+  const ta = el.querySelector('textarea');
+  ta.focus();
+  ta.addEventListener('click', e => e.stopPropagation());
+  ta.addEventListener('blur', () => {
+    const val = ta.value.trim();
+    setCue(exId, val);
+    el.textContent = val || '＋ 加動作備註';
+    el.classList.toggle('empty', !val);
+  });
 }
 
 function setCue(id, val){
