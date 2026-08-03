@@ -392,10 +392,13 @@ const DAYS = [
   },
   {
     id:'lower-b', label:'下肢 B', sublabel:'後鏈主',
-    principle:'羅馬尼亞4組10下 ／ 其餘3組12下 ／ 核心3組15下',
+    principle:'六角槓硬舉4組8下（重新開始先用輕重量）／其餘3組12下／核心3組15下',
     skipNote:'★ 忙或沒恢復可跳過這天',
     exercises:[
-      {id:'lb1', name:'羅馬尼亞深蹲（啞鈴）',
+      {id:'lb0', name:'六角槓硬舉', isNew:true,
+        cue:'★新加入，補臀肌與後側鏈；復健後重新開始，第一週先用輕重量，確認核心穩定再往上加',
+        defaultSets:[{c:2,r:8},{c:2,r:8}]},
+      {id:'lb1', name:'V型深蹲',
         cue:null,
         defaultSets:[{c:1,r:10},{c:2,r:10},{c:1,r:10}]},
       {id:'lb2', name:'腿後勾機',
