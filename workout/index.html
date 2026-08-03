@@ -376,8 +376,8 @@ const DAYS = [
       {id:'ub2', name:'正握滑輪下拉', altSet:true,
         cue:'吸氣拉把，收肩抬頭，手肘用力帶到口袋，到底停頓',
         defaultSets:[{c:1,r:12},{c:2,r:12}]},
-      {id:'ub2b', name:'輔助引體向上', altSet:true,
-        cue:'正握；確認是闊背往下帶動手臂，不是手臂硬拉；長期目標是減少輔助重量',
+      {id:'ub2b', name:'輔助引體向上', altSet:true, lowerIsBetter:true,
+        cue:'正握；確認是闊背往下帶動手臂，不是手臂硬拉；輔助重量調越輕代表越進步',
         defaultSets:[{c:1,r:12},{c:2,r:12}]},
       {id:'ub3', name:'機械側平舉（黑門）',
         cue:'椅高7', superSet:true,
@@ -409,7 +409,11 @@ const DAYS = [
 ];
 
 const EX_DEFAULT_CUE = {};
-DAYS.forEach(day => day.exercises.forEach(ex_ => { EX_DEFAULT_CUE[ex_.id] = ex_.cue || ''; }));
+const EX_MAP = {};
+DAYS.forEach(day => day.exercises.forEach(ex_ => {
+  EX_DEFAULT_CUE[ex_.id] = ex_.cue || '';
+  EX_MAP[ex_.id] = ex_;
+}));
 
 /* ── State ──
   S[exId] = {
@@ -808,7 +812,9 @@ function calcExerciseScore(exId){
   if(!d || !d.w) return null;
   const scores = d.w.map(s => calcSetScore(s.wt, s.r)).filter(v => v !== null);
   if(!scores.length) return null;
-  return Math.round(Math.max(...scores) * 10) / 10;
+  const exDef = EX_MAP[exId];
+  const best = (exDef && exDef.lowerIsBetter) ? Math.min(...scores) : Math.max(...scores);
+  return Math.round(best * 10) / 10;
 }
 
 function completeDay(di){
@@ -836,19 +842,21 @@ function showHistory(exId, exName){
   document.getElementById('historyOverlay').style.display = 'flex';
   document.getElementById('historyTitle').textContent = exName;
   const history = (S[exId] && S[exId].history) || [];
-  renderHistoryChart(history);
+  renderHistoryChart(history, exId);
   renderHistoryList(history);
 }
 function hideHistory(){
   document.getElementById('historyOverlay').style.display = 'none';
 }
 
-function renderHistoryChart(history){
+function renderHistoryChart(history, exId){
   const wrap = document.getElementById('historyChartWrap');
   if(!history.length){
     wrap.innerHTML = `<div style="text-align:center;color:var(--text3);padding:28px 0;font-size:13px">還沒有記錄，完成訓練後這裡會開始累積走勢</div>`;
     return;
   }
+  const exDef = EX_MAP[exId];
+  const inverse = !!(exDef && exDef.lowerIsBetter);
   const W = 340, H = 140, PAD = 22;
   const scores = history.map(item => item.score);
   const min = Math.min(...scores);
@@ -858,16 +866,20 @@ function renderHistoryChart(history){
   const stepX = n > 1 ? (W - PAD*2) / (n - 1) : 0;
   const pts = history.map((item, i) => {
     const x = n > 1 ? PAD + i * stepX : W/2;
-    const y = H - PAD - ((item.score - min) / range) * (H - PAD*2);
+    // 數字越小越好的動作（如輔助引體向上）：反轉映射，讓「進步」在視覺上一樣是往上
+    const normalized = inverse ? (max - item.score) / range : (item.score - min) / range;
+    const y = H - PAD - normalized * (H - PAD*2);
     return {x, y, score: item.score, date: item.date};
   });
   const pathD = pts.map((p,i) => (i===0?'M':'L') + p.x.toFixed(1) + ',' + p.y.toFixed(1)).join(' ');
   const dots = pts.map(p => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.5" fill="var(--accent)"/>`).join('');
   const latest = pts[pts.length-1];
   const first = pts[0];
-  const trend = Math.round((latest.score - first.score) * 10) / 10;
+  const rawDiff = latest.score - first.score;
+  const trend = Math.round((inverse ? -rawDiff : rawDiff) * 10) / 10;
   const trendColor = trend > 0 ? 'var(--green)' : trend < 0 ? '#ff6b6b' : 'var(--text3)';
   const trendSign = trend > 0 ? '+' : '';
+  const inverseNote = inverse ? `<div style="font-size:11px;color:var(--text3);margin-top:4px;text-align:center">（輔助重量，數字越小代表越進步）</div>` : '';
   wrap.innerHTML = `
     <svg width="100%" viewBox="0 0 ${W} ${H}" style="display:block;overflow:visible">
       <path d="${pathD}" fill="none" stroke="var(--accent)" stroke-width="2"/>
@@ -877,7 +889,8 @@ function renderHistoryChart(history){
       <span>${first.date}</span>
       <span style="color:${trendColor};font-weight:600">${trendSign}${trend}（最新 ${latest.score}）</span>
       <span>${latest.date}</span>
-    </div>`;
+    </div>
+    ${inverseNote}`;
 }
 
 function renderHistoryList(history){
