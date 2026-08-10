@@ -124,7 +124,7 @@ button{cursor:pointer;border:none;border-radius:10px;font-family:inherit}
 </div>
 
 <div class="note"><div id="upd" style="margin-bottom:6px"></div>
-  資料來源:World Gym 官網(140 間)與 Music Game Map 音Game地圖社群資料(63 廳/168 台)與 maimai(119 廳,2026/07)。機廳附台數與營業時間,機況以現場為準。距離為直線距離,實際路程會略多。<br><b>最準的查法:</b>到 Google Maps 找到你的位置 → 長按大頭針 → 複製顯示的 Plus Code(例如 7QP3X8V7+64)→ 貼到查詢欄,系統會直接本地解碼,不用連網查地址、不受台灣門牌資料庫不全影響,100% 精準。地址文字查詢用 OpenStreetMap,台灣門牌收錄不齊,查不到時會自動開地圖點選保底。
+  資料來源:World Gym 官網(140 間)與 Music Game Map 音Game地圖社群資料。CHUNITHM 62 廳;maimai 僅列有 CiRCLE PLUS 最新框的 97 廳(純舊框/獨立網門市已排除)。機廳附台數與營業時間,機況以現場為準。距離為直線距離,實際路程會略多。<br><b>最準的查法:</b>到 Google Maps 找到你的位置 → 長按大頭針 → 複製顯示的 Plus Code(例如 7QP3X8V7+64)→ 貼到查詢欄,系統會直接本地解碼,不用連網查地址、不受台灣門牌資料庫不全影響,100% 精準。地址文字查詢用 OpenStreetMap,台灣門牌收錄不齊,查不到時會自動開地圖點選保底。
 </div>
 </div>
 <script>
@@ -172,16 +172,11 @@ function search(lat,lng,label){
   $('arclist').innerHTML=arcs.slice(0,3).map(a=>card(a,false)).join('');
   // maimai(獨立顯示)
   const mais=(DATA.mai||[]).map(m=>({...m,d:hav(lat,lng,m.la,m.lo)})).sort((a,b)=>a.d-b.d);
-  $('main2').textContent='共 '+(DATA.mai||[]).length+' 廳';
+  $('main2').textContent='共 '+(DATA.mai||[]).length+' 廳(僅列 CiRCLE PLUS 最新框)';
   $('mailist').innerHTML=mais.slice(0,3).map(m=>{
     const [num,unit]=fmtN(m.d);
-    const dx=(m.v.match(/DX CiRCLEx(\d+)/)||[])[1]||0;
-    const fin=(m.v.match(/FiNALEx(\d+)/)||[])[1]||0;
-    const net=(m.v.match(/獨立網x(\d+)/)||[])[1]||0;
-    let vb='';
-    if(+dx)vb+='<span class="badge mai">DX×'+dx+'</span>';
-    if(+fin)vb+='<span class="badge old">舊框×'+fin+'</span>';
-    if(+net)vb+='<span class="badge old">獨立網×'+net+'</span>';
+    const plus=(m.v.match(/CiRCLE PLUSx(\d+)/)||[])[1]||m.cnt||0;
+    const vb='<span class="badge mai">PLUS×'+plus+'</span>';
     return `<div class="card">
       <div class="rankd"><div class="km" style="color:var(--mai)">${num}</div><div class="u">${unit}</div></div>
       <div class="info"><div class="nm">${esc(m.n)}${vb}</div><div class="ad">${esc(m.a)}${m.open&&m.open!=='未知'?' ・ '+esc(m.open):''}</div></div>
