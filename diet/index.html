@@ -82,6 +82,38 @@ h1{
   cursor:pointer;user-select:none;
 }
 
+.tabbar{display:flex;justify-content:center;gap:8px;margin-top:18px}
+.tabbtn{
+  background:var(--card);border:1px solid var(--border);color:var(--ink2);
+  font-size:13px;font-weight:600;padding:8px 22px;border-radius:999px;
+  cursor:pointer;font-family:inherit;
+}
+.tabbtn.active{
+  background:linear-gradient(120deg,var(--rose-deep),var(--rose));
+  color:#fff;border-color:transparent;
+}
+
+.calnav{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:16px}
+.calmonth{font-family:"Noto Serif TC",serif;font-size:15.5px;font-weight:600;min-width:110px;text-align:center;color:var(--ink)}
+.calgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.calwd{text-align:center;font-size:11px;color:var(--ink3);padding-bottom:4px}
+.calday{
+  aspect-ratio:1;border-radius:12px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;font-size:12.5px;color:var(--ink);
+  cursor:pointer;border:1.5px solid transparent;background:var(--card2);
+}
+.calday.empty{visibility:hidden;cursor:default}
+.calday.today{border-color:var(--rose-deep)}
+.calday .kc{font-size:8.5px;color:var(--ink2);margin-top:2px}
+.calday.ok{background:rgba(111,169,206,0.28)}
+.calday.over{background:rgba(224,145,116,0.38)}
+.calday.none{background:var(--card2);color:var(--ink3)}
+.callegend{display:flex;justify-content:center;gap:14px;margin-top:14px;font-size:11px;color:var(--ink2)}
+.callegend .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px}
+.dot.ok{background:#5fa3c9}
+.dot.over{background:#dd8f68}
+.dot.none{background:#d8e3ec}
+
 main{max-width:520px;margin:0 auto;padding:20px 18px 0}
 
 .panel{
@@ -225,7 +257,11 @@ main{max-width:520px;margin:0 auto;padding:20px 18px 0}
     <div class="crown">🌸</div>
     <h1>我的飲食紀錄</h1>
     <div class="sub">記錄每一餐，溫柔地靠近目標</div>
-    <div class="datebar">
+    <div class="tabbar">
+      <button class="tabbtn active" id="tab-day" onclick="switchTab('day')">單日</button>
+      <button class="tabbtn" id="tab-cal" onclick="switchTab('cal')">月曆</button>
+    </div>
+    <div class="datebar" id="datebar">
       <button class="datebtn" onclick="changeDay(-1)">‹</button>
       <div class="datelabel" id="dateLabel"></div>
       <button class="datebtn" onclick="changeDay(1)">›</button>
@@ -236,6 +272,7 @@ main{max-width:520px;margin:0 auto;padding:20px 18px 0}
 
 <main class="wrap">
 
+<div id="dayView">
   <div class="panel">
     <div class="panel-title">🍯 今日累計</div>
     <div class="metric">
@@ -312,6 +349,24 @@ main{max-width:520px;margin:0 auto;padding:20px 18px 0}
       </div>
     </div>
   </div>
+
+</div>
+
+<div id="calView" style="display:none">
+  <div class="panel">
+    <div class="calnav">
+      <button class="datebtn" onclick="changeMonth(-1)">‹</button>
+      <div class="calmonth" id="calMonthLabel"></div>
+      <button class="datebtn" onclick="changeMonth(1)">›</button>
+    </div>
+    <div class="calgrid" id="calGrid"></div>
+    <div class="callegend">
+      <span><span class="dot ok"></span>達標內</span>
+      <span><span class="dot over"></span>超標</span>
+      <span><span class="dot none"></span>無紀錄</span>
+    </div>
+  </div>
+</div>
 
   <div class="footer">e24222.github.io · YenTool</div>
 </main>
@@ -558,6 +613,60 @@ function toast(msg){
   el.textContent = msg;
   el.classList.add('show');
   setTimeout(()=>el.classList.remove('show'), 2000);
+}
+
+let calYear, calMonthIdx;
+
+function switchTab(tab){
+  document.getElementById('tab-day').classList.toggle('active', tab==='day');
+  document.getElementById('tab-cal').classList.toggle('active', tab==='cal');
+  document.getElementById('dayView').style.display = tab==='day' ? '' : 'none';
+  document.getElementById('calView').style.display = tab==='cal' ? '' : 'none';
+  if(tab==='cal') renderCalendar();
+}
+
+function changeMonth(delta){
+  if(calYear===undefined){ const d=new Date(); calYear=d.getFullYear(); calMonthIdx=d.getMonth(); }
+  calMonthIdx += delta;
+  if(calMonthIdx<0){ calMonthIdx=11; calYear--; }
+  if(calMonthIdx>11){ calMonthIdx=0; calYear++; }
+  renderCalendar();
+}
+
+function renderCalendar(){
+  if(calYear===undefined){ const d=new Date(); calYear=d.getFullYear(); calMonthIdx=d.getMonth(); }
+  document.getElementById('calMonthLabel').textContent = `${calYear}年 ${calMonthIdx+1}月`;
+  const grid = document.getElementById('calGrid');
+  const firstDay = new Date(calYear, calMonthIdx, 1);
+  const startWeekday = firstDay.getDay();
+  const daysInMonth = new Date(calYear, calMonthIdx+1, 0).getDate();
+  const targetKcal = (D.targets||DEFAULT_TARGETS).kcal;
+  const todayS = todayStr();
+
+  let html = ['日','一','二','三','四','五','六'].map(w=>`<div class="calwd">${w}</div>`).join('');
+  for(let i=0;i<startWeekday;i++) html += `<div class="calday empty"></div>`;
+  for(let day=1; day<=daysInMonth; day++){
+    const ds = `${calYear}-${String(calMonthIdx+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    const dd = D.days[ds];
+    let cls = 'none', kcalTxt = '';
+    if(dd && dd.meals && dd.meals.length){
+      const kcal = dd.meals.reduce((s,m)=>s+(+m.kcal||0),0);
+      cls = kcal > targetKcal ? 'over' : 'ok';
+      kcalTxt = Math.round(kcal).toLocaleString();
+    }
+    const todayCls = ds===todayS ? ' today' : '';
+    html += `<div class="calday ${cls}${todayCls}" onclick="jumpToDate('${ds}')">
+      <div>${day}</div>
+      ${kcalTxt ? `<div class="kc">${kcalTxt}</div>` : ''}
+    </div>`;
+  }
+  grid.innerHTML = html;
+}
+
+function jumpToDate(ds){
+  curDate = ds;
+  switchTab('day');
+  render();
 }
 
 /* ── init ── */
