@@ -670,16 +670,24 @@ function exCard(ex_, inSuper){
 }
 
 function renderBestText(sets, inverse){
+  const validRows = (sets||[]).filter(s => s.wt && s.r);
   const total = calcSessionScore(sets, inverse);
-  if(total === null){
+  if(total === null || !validRows.length){
     return `<span style="color:var(--text3)">👍 最佳：尚無記錄，完成本日訓練後自動產生</span>`;
   }
-  const rowsText = (sets||[])
-    .filter(s => s.wt && s.r)
-    .map(s => `${s.wt}kg×${s.r}下×${s.c||1}組`)
-    .join('、');
+  const rowsHtml = validRows.map(s => `
+    <div class="set-row">
+      <span style="font-size:22px;width:28px;text-align:center;flex-shrink:0">👍</span>
+      <span class="num-input inp-weight">${s.wt}</span>
+      <span class="set-sep">kg ×</span>
+      <span class="num-input inp-reps">${s.r}</span>
+      <span class="set-sep">下 ×</span>
+      <span class="num-input inp-sets">${s.c||1}</span>
+      <span class="set-sep">組</span>
+    </div>`).join('');
   const note = inverse ? '（輔助重量，總分越小越好）' : '';
-  return `👍 最佳：<strong style="color:var(--text)">${rowsText}</strong>${note}<span style="color:var(--text3);font-size:12px">　合計 ${Math.round(total*10)/10}・自動追蹤</span>`;
+  return `<div class="sets-col" style="margin-bottom:8px">${rowsHtml}</div>
+    <div style="color:var(--text3);font-size:13px">合計 ${Math.round(total*10)/10}${note}・自動追蹤</div>`;
 }
 
 function escapeHtml(s){
