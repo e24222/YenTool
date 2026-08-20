@@ -681,9 +681,7 @@ function renderBestText(sets, inverse){
       <span class="num-input inp-weight">${s.wt}</span>
       <span class="set-sep">kg ×</span>
       <span class="num-input inp-reps">${s.r}</span>
-      <span class="set-sep">下 ×</span>
-      <span class="num-input inp-sets">${s.c||1}</span>
-      <span class="set-sep">組</span>
+      <span class="set-sep">下</span>
     </div>`).join('');
   const note = inverse ? '（輔助重量，總分越小越好）' : '';
   return `<div class="sets-col" style="margin-bottom:8px">${rowsHtml}</div>
@@ -705,11 +703,7 @@ function singleRowHTML(exId, type, i, s){
     <input class="num-input inp-reps" type="number" step="1" min="1"
       inputmode="numeric" placeholder="次數" value="${s.r||''}"
       oninput="setRowField('${exId}','${type}',${i},'r',this.value)">
-    <span class="set-sep">下 ×</span>
-    <input class="num-input inp-sets" type="number" step="1" min="1"
-      inputmode="numeric" placeholder="組數" value="${s.c||''}"
-      oninput="setRowField('${exId}','${type}',${i},'c',this.value)">
-    <span class="set-sep">組</span>
+    <span class="set-sep">下</span>
   </div>`;
 }
 
@@ -823,8 +817,8 @@ function copyDay(di){
     const d = S[ex_.id];
     t += ex_.name + '\n';
     if(d){
-      (d.b||[]).forEach(s => { t += `👍 ${s.wt||'__'}kg × ${s.r||'__'}次 × ${s.c||'__'}組\n`; });
-      (d.w||[]).forEach(s => { t += `✅ ${s.wt||'__'}kg × ${s.r||'__'}次 × ${s.c||'__'}組\n`; });
+      (d.b||[]).forEach(s => { t += `👍 ${s.wt||'__'}kg × ${s.r||'__'}次\n`; });
+      (d.w||[]).forEach(s => { t += `✅ ${s.wt||'__'}kg × ${s.r||'__'}次\n`; });
     }
     t += '\n';
   });
