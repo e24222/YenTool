@@ -670,17 +670,16 @@ function exCard(ex_, inSuper){
 }
 
 function renderBestText(sets, inverse){
-  let bestRow = null, bestScore = null;
-  (sets||[]).forEach(s => {
-    const sc = calcSetScore(s.wt, s.r);
-    if(sc === null) return;
-    if(bestScore === null || (inverse ? sc < bestScore : sc > bestScore)){ bestScore = sc; bestRow = s; }
-  });
-  if(!bestRow){
+  const total = calcSessionScore(sets, inverse);
+  if(total === null){
     return `<span style="color:var(--text3)">👍 最佳：尚無記錄，完成本日訓練後自動產生</span>`;
   }
-  const note = inverse ? '（輔助重量，越輕越好）' : '';
-  return `👍 最佳：<strong style="color:var(--text)">${bestRow.wt}kg × ${bestRow.r}下</strong>${note}<span style="color:var(--text3);font-size:12px">　自動追蹤</span>`;
+  const rowsText = (sets||[])
+    .filter(s => s.wt && s.r)
+    .map(s => `${s.wt}kg×${s.r}下`)
+    .join('、');
+  const note = inverse ? '（輔助重量，總分越小越好）' : '';
+  return `👍 最佳：<strong style="color:var(--text)">${rowsText}</strong>${note}<span style="color:var(--text3);font-size:12px">　合計 ${Math.round(total*10)/10}・自動追蹤</span>`;
 }
 
 function escapeHtml(s){
@@ -826,21 +825,27 @@ function copyDay(di){
     .catch(() => toast('複製失敗'));
 }
 
-/* ── 加權分數（Epley 公式：重量為主，次數為輔，不計組數）── */
+/* ── 加權分數（Epley 公式：重量為主，次數為輔）── 三組加總 ── */
 function calcSetScore(wt, r){
   const w = parseFloat(wt), rr = parseFloat(r);
   if(!w || !rr) return null;
   return w * (1 + rr / 30);
 }
 
+function calcSessionScore(sets, inverse){
+  const scores = (sets||[]).map(s => calcSetScore(s.wt, s.r)).filter(v => v !== null);
+  if(!scores.length) return null;
+  return scores.reduce((a,b) => a+b, 0);
+}
+
 function calcExerciseScore(exId){
   const d = S[exId];
   if(!d || !d.w) return null;
-  const scores = d.w.map(s => calcSetScore(s.wt, s.r)).filter(v => v !== null);
-  if(!scores.length) return null;
   const exDef = EX_MAP[exId];
-  const best = (exDef && exDef.lowerIsBetter) ? Math.min(...scores) : Math.max(...scores);
-  return Math.round(best * 10) / 10;
+  const inverse = !!(exDef && exDef.lowerIsBetter);
+  const total = calcSessionScore(d.w, inverse);
+  if(total === null) return null;
+  return Math.round(total * 10) / 10;
 }
 
 function completeDay(di){
@@ -853,17 +858,10 @@ function completeDay(di){
     const exDef = EX_MAP[ex_.id];
     const inverse = !!(exDef && exDef.lowerIsBetter);
 
-    // 找出今天✅裡表現最好的那一組
-    let bestSetToday = null, bestScoreToday = null;
-    d.w.forEach(s => {
-      const sc = calcSetScore(s.wt, s.r);
-      if(sc === null) return;
-      if(bestScoreToday === null || (inverse ? sc < bestScoreToday : sc > bestScoreToday)){
-        bestScoreToday = sc; bestSetToday = s;
-      }
-    });
-    if(bestScoreToday === null) return;
-    const score = Math.round(bestScoreToday * 10) / 10;
+    // 今天✅三組加總的分數
+    const totalToday = calcSessionScore(d.w, inverse);
+    if(totalToday === null) return;
+    const score = Math.round(totalToday * 10) / 10;
 
     if(!S[ex_.id].history) S[ex_.id].history = [];
     const hist = S[ex_.id].history;
@@ -872,16 +870,11 @@ function completeDay(di){
     else hist.push({date: today, score});
     count++;
 
-    // 自動判斷是否創下新的「👍最佳」，不用手動填
-    let bestScoreStored = null;
-    (d.b||[]).forEach(s => {
-      const sc = calcSetScore(s.wt, s.r);
-      if(sc === null) return;
-      if(bestScoreStored === null || (inverse ? sc < bestScoreStored : sc > bestScoreStored)) bestScoreStored = sc;
-    });
-    const isNewPR = bestScoreStored === null || (inverse ? bestScoreToday < bestScoreStored : bestScoreToday > bestScoreStored);
+    // 自動判斷今天整體（三組加總）是否創下新的「👍最佳」，不用手動填
+    const totalStored = calcSessionScore(d.b, inverse);
+    const isNewPR = totalStored === null || (inverse ? totalToday < totalStored : totalToday > totalStored);
     if(isNewPR){
-      d.b = [{...bestSetToday}];
+      d.b = d.w.map(s => ({...s}));
       prCount++;
       const bestEl = document.getElementById('best-' + ex_.id);
       if(bestEl) bestEl.innerHTML = renderBestText(d.b, inverse);
