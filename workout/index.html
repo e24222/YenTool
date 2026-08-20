@@ -134,6 +134,13 @@ main{padding:12px}
 }
 .cue-line:active{opacity:0.75}
 .cue-line.empty{font-style:italic;color:var(--text3)}
+
+.best-display{
+  font-size:15px;color:var(--text2);
+  background:var(--bg3);border-radius:8px;
+  padding:8px 10px;margin:10px 0 10px;
+  line-height:1.5;
+}
 .cue-textarea{
   width:100%;
   background:var(--bg3);
@@ -613,6 +620,8 @@ function build(){
 
 function exCard(ex_, inSuper){
   const d = exState(ex_.id, ex_.defaultSets);
+  const exDef = EX_MAP[ex_.id];
+  const inverse = !!(exDef && exDef.lowerIsBetter);
 
   let badges = '';
   if(ex_.isNew) badges += `<span class="badge badge-new">新增</span>`;
@@ -627,7 +636,6 @@ function exCard(ex_, inSuper){
     : `<div class="cue-line empty" id="cueline-${ex_.id}" onclick="editCue('${ex_.id}')">＋ 加動作備註</div>`;
 
   const mkSection = (type, arr) => {
-    const emoji = type==='b'?'👍':'✅';
     let s = `<div class="sets-col" id="sets-${ex_.id}-${type}">`;
     arr.forEach((row,i) => { s += singleRowHTML(ex_.id, type, i, row); });
     s += `</div><div class="set-actions">
@@ -636,6 +644,7 @@ function exCard(ex_, inSuper){
     </div>`;
     return s;
   };
+  const bestHtml = `<div class="best-display" id="best-${ex_.id}">${renderBestText(d.b, inverse)}</div>`;
   const copyPbBtn = `<div style="display:flex;justify-content:flex-end;margin-top:8px">
     <button onclick="copyPbToWeek('${ex_.id}')"
       style="background:none;border:0.5px solid var(--border);border-radius:8px;
@@ -644,7 +653,7 @@ function exCard(ex_, inSuper){
       👍 → ✅
     </button>
   </div>`;
-  const setsHtml = mkSection('b', d.b) + '<div style="height:6px"></div>' + mkSection('w', d.w) + copyPbBtn;
+  const setsHtml = bestHtml + mkSection('w', d.w) + copyPbBtn;
 
   const cardStyle = inSuper ? 'border-radius:0;border:none;border-bottom:0.5px solid var(--border);margin-bottom:0' : '';
   return `<div class="ex-card" style="${cardStyle}">
@@ -658,6 +667,20 @@ function exCard(ex_, inSuper){
     </div>
     ${setsHtml}
   </div>`;
+}
+
+function renderBestText(sets, inverse){
+  let bestRow = null, bestScore = null;
+  (sets||[]).forEach(s => {
+    const sc = calcSetScore(s.wt, s.r);
+    if(sc === null) return;
+    if(bestScore === null || (inverse ? sc < bestScore : sc > bestScore)){ bestScore = sc; bestRow = s; }
+  });
+  if(!bestRow){
+    return `<span style="color:var(--text3)">👍 最佳：尚無記錄，完成本日訓練後自動產生</span>`;
+  }
+  const note = inverse ? '（輔助重量，越輕越好）' : '';
+  return `👍 最佳：<strong style="color:var(--text)">${bestRow.wt}kg × ${bestRow.r}下</strong>${note}<span style="color:var(--text3);font-size:12px">　自動追蹤</span>`;
 }
 
 function escapeHtml(s){
@@ -823,21 +846,51 @@ function calcExerciseScore(exId){
 function completeDay(di){
   const day = DAYS[di];
   const today = new Date().toISOString().slice(0,10);
-  let count = 0;
+  let count = 0, prCount = 0;
   day.exercises.forEach(ex_ => {
-    const score = calcExerciseScore(ex_.id);
-    if(score === null) return;
-    if(!S[ex_.id]) S[ex_.id] = {};
+    const d = S[ex_.id];
+    if(!d || !d.w) return;
+    const exDef = EX_MAP[ex_.id];
+    const inverse = !!(exDef && exDef.lowerIsBetter);
+
+    // 找出今天✅裡表現最好的那一組
+    let bestSetToday = null, bestScoreToday = null;
+    d.w.forEach(s => {
+      const sc = calcSetScore(s.wt, s.r);
+      if(sc === null) return;
+      if(bestScoreToday === null || (inverse ? sc < bestScoreToday : sc > bestScoreToday)){
+        bestScoreToday = sc; bestSetToday = s;
+      }
+    });
+    if(bestScoreToday === null) return;
+    const score = Math.round(bestScoreToday * 10) / 10;
+
     if(!S[ex_.id].history) S[ex_.id].history = [];
     const hist = S[ex_.id].history;
-    // 同一天重複按「完成」時，更新當天那筆而不是一直疊加
     const todayIdx = hist.findIndex(h => h.date === today);
     if(todayIdx >= 0) hist[todayIdx].score = score;
     else hist.push({date: today, score});
     count++;
+
+    // 自動判斷是否創下新的「👍最佳」，不用手動填
+    let bestScoreStored = null;
+    (d.b||[]).forEach(s => {
+      const sc = calcSetScore(s.wt, s.r);
+      if(sc === null) return;
+      if(bestScoreStored === null || (inverse ? sc < bestScoreStored : sc > bestScoreStored)) bestScoreStored = sc;
+    });
+    const isNewPR = bestScoreStored === null || (inverse ? bestScoreToday < bestScoreStored : bestScoreToday > bestScoreStored);
+    if(isNewPR){
+      d.b = [{...bestSetToday}];
+      prCount++;
+      const bestEl = document.getElementById('best-' + ex_.id);
+      if(bestEl) bestEl.innerHTML = renderBestText(d.b, inverse);
+    }
   });
   save();
-  toast(count > 0 ? `已記錄 ${count} 個動作的本日分數 ✓` : '本週欄位還沒有填寫任何重量／次數');
+  let msg = count > 0 ? `已記錄 ${count} 個動作的本日分數` : '本週欄位還沒有填寫任何重量／次數';
+  if(prCount > 0) msg += ` 🎉 ${prCount} 個新紀錄！`;
+  toast(msg);
 }
 
 /* ── 歷史走勢圖 ── */
