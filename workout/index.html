@@ -832,16 +832,9 @@ function calcSetScore(wt, r){
   return w * (1 + rr / 30);
 }
 
-// 一列可能代表「同重量同次數」重複好幾組（用 c 欄位表示組數），算分要把組數乘進去
-function calcRowScore(row){
-  const single = calcSetScore(row.wt, row.r);
-  if(single === null) return null;
-  const c = parseFloat(row.c) || 1;
-  return single * c;
-}
-
+// 組數（c）只是顯示用的紀錄資訊，不計入分數——分數只看每一列的重量×次數，各列直接加總
 function calcSessionScore(sets, inverse){
-  const scores = (sets||[]).map(s => calcRowScore(s)).filter(v => v !== null);
+  const scores = (sets||[]).map(s => calcSetScore(s.wt, s.r)).filter(v => v !== null);
   if(!scores.length) return null;
   return scores.reduce((a,b) => a+b, 0);
 }
