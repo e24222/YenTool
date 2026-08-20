@@ -676,7 +676,7 @@ function renderBestText(sets, inverse){
   }
   const rowsText = (sets||[])
     .filter(s => s.wt && s.r)
-    .map(s => `${s.wt}kg×${s.r}下`)
+    .map(s => `${s.wt}kg×${s.r}下×${s.c||1}組`)
     .join('、');
   const note = inverse ? '（輔助重量，總分越小越好）' : '';
   return `👍 最佳：<strong style="color:var(--text)">${rowsText}</strong>${note}<span style="color:var(--text3);font-size:12px">　合計 ${Math.round(total*10)/10}・自動追蹤</span>`;
@@ -832,8 +832,16 @@ function calcSetScore(wt, r){
   return w * (1 + rr / 30);
 }
 
+// 一列可能代表「同重量同次數」重複好幾組（用 c 欄位表示組數），算分要把組數乘進去
+function calcRowScore(row){
+  const single = calcSetScore(row.wt, row.r);
+  if(single === null) return null;
+  const c = parseFloat(row.c) || 1;
+  return single * c;
+}
+
 function calcSessionScore(sets, inverse){
-  const scores = (sets||[]).map(s => calcSetScore(s.wt, s.r)).filter(v => v !== null);
+  const scores = (sets||[]).map(s => calcRowScore(s)).filter(v => v !== null);
   if(!scores.length) return null;
   return scores.reduce((a,b) => a+b, 0);
 }
