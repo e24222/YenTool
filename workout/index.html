@@ -59,35 +59,21 @@ h1{font-size:26px;font-weight:600;letter-spacing:-.3px}
 }
 .clear-btn:active{color:var(--text2)}
 
-.week-strip{
-  display:flex;gap:5px;padding:0 16px 10px;overflow-x:auto;scrollbar-width:none;
-}
-.week-strip::-webkit-scrollbar{display:none}
-.ws-label{font-size:11px;color:var(--text3);display:flex;align-items:center;padding-right:4px;white-space:nowrap}
-.ws-box{
-  display:flex;align-items:center;justify-content:center;
-  min-width:42px;height:32px;border-radius:6px;
-  font-size:12px;font-weight:500;border:0.5px solid var(--border);
-  white-space:nowrap;
-}
-.ws-u{background:rgba(240,160,48,0.15);color:var(--accent);border-color:rgba(240,160,48,0.3)}
-.ws-l{background:rgba(52,199,89,0.15);color:var(--green);border-color:rgba(52,199,89,0.3)}
-.ws-rest{background:none;color:var(--text3)}
-.ws-skip{background:none;color:var(--text3);text-decoration:line-through;opacity:.5}
-.ws-div{width:0.5px;background:var(--border);margin:4px 2px}
-
 .tabs{
   display:flex;
+  overflow-x:auto;
+  scrollbar-width:none;
   background:var(--bg3);
   padding:3px;
   gap:3px;
 }
+.tabs::-webkit-scrollbar{display:none}
 .tab-btn{
-  flex:1;min-width:0;
+  flex:0 0 auto;
   background:none;border:none;border-radius:8px;
-  padding:10px 4px;
+  padding:10px 16px;
   color:var(--text2);font-size:16px;font-weight:500;
-  cursor:pointer;text-align:center;
+  cursor:pointer;text-align:center;white-space:nowrap;
   font-family:inherit;
   transition:background .15s,color .15s;
 }
@@ -109,29 +95,6 @@ main{padding:12px}
   padding:0 2px;
 }
 
-.subtab-bar{
-  display:flex;gap:6px;margin-bottom:14px;
-}
-.subtab-btn{
-  flex:1;
-  background:var(--bg2);
-  border:0.5px solid var(--border);
-  border-radius:10px;
-  color:var(--text2);
-  font-size:15px;
-  padding:9px 0;
-  cursor:pointer;
-  font-family:inherit;
-  transition:background .12s,color .12s,border-color .12s;
-}
-.subtab-btn.active{
-  background:rgba(240,160,48,0.12);
-  border-color:var(--border-accent,var(--accent));
-  color:var(--accent);
-  font-weight:500;
-}
-.warmup-sub{display:none}
-.warmup-sub.active{display:block}
 .warmup-item-name{font-size:15px;color:var(--text);font-weight:500;display:flex;justify-content:space-between}
 .warmup-item-dur{color:var(--accent);font-weight:400;font-size:13px}
 .warmup-item-desc{font-size:14px;color:var(--text3);margin-top:4px;line-height:1.55}
@@ -288,20 +251,6 @@ main{padding:12px}
       <button class="clear-btn" onclick="showTokenUI()" style="font-size:16px;padding:4px">⚙️</button>
     </div>
   </div>
-  <div class="week-strip">
-    <span class="ws-label">4天週</span>
-    <div class="ws-box ws-u">上 A</div>
-    <div class="ws-box ws-l">下 A</div>
-    <div class="ws-box ws-rest">休</div>
-    <div class="ws-box ws-u">上 B</div>
-    <div class="ws-box ws-l">下 B</div>
-    <div class="ws-div"></div>
-    <span class="ws-label">3天週</span>
-    <div class="ws-box ws-u">上 A</div>
-    <div class="ws-box ws-l">下 A</div>
-    <div class="ws-box ws-u">上 B</div>
-    <div class="ws-box ws-skip">下 B</div>
-  </div>
   <div class="tabs" id="tabBar"></div>
   <div id="daySubLabel" style="text-align:center;font-size:15px;color:var(--text2);padding:5px 0 2px;"></div>
   <div id="daySubLabel" style="text-align:center;font-size:15px;color:var(--text2);padding:4px 0 8px;"></div>
@@ -453,22 +402,22 @@ const WARMUPS = {
   upper: {
     label: '練前上肢拉伸',
     items: [
-      {name:'貓牛式', dur:'30秒', desc:'四足跪姿，吸氣塌腰抬頭、吐氣拱背低頭，鬆脊椎和肩胛'},
-      {name:'穿針式', dur:'左右各30秒', desc:'四足跪姿，一手穿過對側腋下貼地，伸展肩胛/上背'},
-      {name:'小狗延伸式', dur:'45秒', desc:'跪姿，臀部坐向腳跟、雙手向前伸直貼地，重點伸展肩膀和闊背肌'},
-      {name:'跪姿手臂交叉伸展', dur:'左右各20秒', desc:'跪坐，手臂橫過胸前用另一手輕壓，伸展三角肌後側'},
-      {name:'過頭三頭肌伸展', dur:'左右各20秒', desc:'跪坐或盤坐，手肘向上彎曲手摸背，另一手輕扶手肘往內壓'},
+      {name:'貓牛式', dur:'30秒', desc:'四足跪姿，手在肩膀正下方、膝蓋在髖部正下方。吸氣時肚子下沉、抬頭挺胸（牛式）；吐氣時拱背、下巴收向胸口（貓式）。兩個動作緩慢交替，鬆開脊椎和肩胛。'},
+      {name:'穿針式', dur:'左右各30秒', desc:'四足跪姿，一手離地，從對側手臂下方穿過去，肩膀和側臉貼向地面，另一手可扶地撐穩。感受肩胛骨和上背被拉開，換邊重複。'},
+      {name:'小狗延伸式', dur:'45秒', desc:'從四足跪姿開始，臀部往後坐向腳跟，雙手向前伸直、掌心貼地，胸口盡量往地板下沉。重點伸展肩膀前側和闊背肌。'},
+      {name:'跪姿手臂交叉伸展', dur:'左右各20秒', desc:'跪坐，一手打直橫過胸前，另一手在手肘處輕輕往身體方向壓，感受肩膀後側（三角肌後束）被拉開，換邊重複。'},
+      {name:'過頭三頭肌伸展', dur:'左右各20秒', desc:'跪坐或盤坐，一手手肘彎曲舉高、手掌摸向後背中間，另一手扶住手肘輕輕往內、往下壓，伸展手臂後側三頭肌，換邊重複。'},
     ]
   },
   lower: {
     label: '練前下肢拉伸',
     items: [
-      {name:'嬰兒式', dur:'30秒', desc:'跪坐後臀部坐向腳跟，上身前趴，鬆腰椎和髖屈肌'},
-      {name:'鴿式', dur:'左右各45秒', desc:'前腿彎曲外開、後腿伸直後方，重點伸展臀肌和梨狀肌'},
-      {name:'蝴蝶式', dur:'30秒', desc:'坐姿，腳掌相對、膝蓋自然下沉，可微微前傾，伸展內收肌'},
-      {name:'躺姿抱膝', dur:'左右各20秒', desc:'仰躺，單腳膝蓋抱向胸口，伸展臀部和下背'},
-      {name:'躺姿股四頭肌伸展', dur:'左右各20秒', desc:'側躺，抓腳踝往臀部方向拉，伸展股四頭肌'},
-      {name:'坐姿體前彎', dur:'30秒', desc:'坐姿雙腿伸直，上身前傾摸腳，伸展膕繩肌'},
+      {name:'嬰兒式', dur:'30秒', desc:'跪坐，臀部坐向腳跟，上身慢慢向前趴下，額頭貼地、雙手向前伸直放鬆。鬆開下背和髖屈肌，呼吸放慢。'},
+      {name:'鴿式', dur:'左右各45秒', desc:'前腳小腿彎曲橫放在身體前方，後腳向後伸直貼地，上身可保持直立或慢慢前趴。重點伸展前腳這側的臀肌和梨狀肌，換邊重複。'},
+      {name:'蝴蝶式', dur:'30秒', desc:'坐姿，雙腳掌相對併攏，膝蓋自然往兩側下沉，可用手輕壓膝蓋外側加深、或身體微微前傾，伸展大腿內側。'},
+      {name:'躺姿抱膝', dur:'左右各20秒', desc:'仰躺，一腳伸直放鬆，另一腳膝蓋彎曲抱向胸口，雙手扣住小腿或膝蓋輕輕往內壓，伸展臀部和下背，換邊重複。'},
+      {name:'躺姿股四頭肌伸展', dur:'左右各20秒', desc:'側躺，下方手臂枕頭，上方腳膝蓋彎曲，手抓住同側腳踝往臀部方向拉，感受大腿前側伸展，換邊重複。'},
+      {name:'坐姿體前彎', dur:'30秒', desc:'坐姿，雙腿向前伸直併攏，上身慢慢往前傾、雙手伸向腳尖，膝蓋保持自然（不用勉強打直），伸展大腿後側腿後腱。'},
     ]
   }
 };
@@ -627,26 +576,21 @@ function build(){
   const bar = document.getElementById('tabBar');
   const main = document.getElementById('mainContent');
 
-  // 練前拉伸 — 獨立分頁，放最前面
-  const warmupBtn = document.createElement('button');
-  warmupBtn.className = 'tab-btn';
-  warmupBtn.dataset.tabkey = 'warmup';
-  warmupBtn.innerHTML = '🧘 練前拉伸';
-  warmupBtn.onclick = () => switchTab('warmup');
-  bar.appendChild(warmupBtn);
+  // 上肢拉伸 / 下肢拉伸 — 各自獨立分頁，放最前面
+  ['upper','lower'].forEach(type => {
+    const btn = document.createElement('button');
+    btn.className = 'tab-btn';
+    btn.dataset.tabkey = 'warmup-' + type;
+    btn.innerHTML = (type==='upper' ? '🧘 上肢拉伸' : '🧘 下肢拉伸');
+    btn.onclick = () => switchTab('warmup-' + type);
+    bar.appendChild(btn);
 
-  const warmupPanel = document.createElement('div');
-  warmupPanel.id = 'panel-warmup';
-  warmupPanel.className = 'day-panel';
-  warmupPanel.innerHTML = `
-    <div class="subtab-bar">
-      <button class="subtab-btn active" id="wst-upper" onclick="switchWarmupSub('upper')">上肢</button>
-      <button class="subtab-btn" id="wst-lower" onclick="switchWarmupSub('lower')">下肢</button>
-    </div>
-    <div id="warmup-sub-upper" class="warmup-sub active">${warmupListHTML('upper')}</div>
-    <div id="warmup-sub-lower" class="warmup-sub">${warmupListHTML('lower')}</div>
-  `;
-  main.appendChild(warmupPanel);
+    const panel = document.createElement('div');
+    panel.id = 'panel-warmup-' + type;
+    panel.className = 'day-panel';
+    panel.innerHTML = warmupListHTML(type);
+    main.appendChild(panel);
+  });
 
   DAYS.forEach((day, i) => {
     const btn = document.createElement('button');
@@ -702,13 +646,6 @@ function warmupListHTML(type){
       <div class="warmup-item-name"><span>${it.name}</span><span class="warmup-item-dur">${it.dur}</span></div>
       <div class="warmup-item-desc">${it.desc}</div>
     </div>`).join('');
-}
-
-function switchWarmupSub(type){
-  document.getElementById('wst-upper').classList.toggle('active', type==='upper');
-  document.getElementById('wst-lower').classList.toggle('active', type==='lower');
-  document.getElementById('warmup-sub-upper').classList.toggle('active', type==='upper');
-  document.getElementById('warmup-sub-lower').classList.toggle('active', type==='lower');
 }
 
 function exCard(ex_, inSuper){
@@ -865,7 +802,7 @@ function switchTab(key){
   if(activeBtn) activeBtn.scrollIntoView({behavior:'smooth', block:'nearest', inline:'center'});
   window.scrollTo({top:0, behavior:'smooth'});
   const sub = document.getElementById('daySubLabel');
-  if(sub) sub.textContent = (key === 'warmup') ? '訓練前熱身伸展' : (DAYS[key] ? DAYS[key].sublabel : '');
+  if(sub) sub.textContent = (key === 'warmup-upper' || key === 'warmup-lower') ? '訓練前熱身伸展' : (DAYS[key] ? DAYS[key].sublabel : '');
 }
 
 function editCue(exId){
