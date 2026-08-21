@@ -80,6 +80,10 @@ h1{font-size:26px;font-weight:600;letter-spacing:-.3px}
   background:var(--accent);
   color:#000;font-weight:700;
 }
+.tab-btn-wide{
+  padding:16px 8px;
+  font-size:17px;
+}
 
 main{padding:12px}
 
@@ -580,7 +584,7 @@ function build(){
   // 上肢拉伸 / 下肢拉伸 — 獨立一排，跟訓練日分頁分開
   ['upper','lower'].forEach(type => {
     const btn = document.createElement('button');
-    btn.className = 'tab-btn';
+    btn.className = 'tab-btn tab-btn-wide';
     btn.dataset.tabkey = 'warmup-' + type;
     btn.innerHTML = (type==='upper' ? '🧘 上肢拉伸' : '🧘 下肢拉伸');
     btn.onclick = () => switchTab('warmup-' + type);
