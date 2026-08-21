@@ -61,19 +61,18 @@ h1{font-size:26px;font-weight:600;letter-spacing:-.3px}
 
 .tabs{
   display:flex;
-  overflow-x:auto;
-  scrollbar-width:none;
   background:var(--bg3);
+  border-radius:10px;
   padding:3px;
   gap:3px;
 }
-.tabs::-webkit-scrollbar{display:none}
 .tab-btn{
-  flex:0 0 auto;
+  flex:1;min-width:0;
   background:none;border:none;border-radius:8px;
-  padding:10px 16px;
+  padding:13px 6px;
   color:var(--text2);font-size:16px;font-weight:500;
   cursor:pointer;text-align:center;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;
   font-family:inherit;
   transition:background .15s,color .15s;
 }
@@ -251,7 +250,8 @@ main{padding:12px}
       <button class="clear-btn" onclick="showTokenUI()" style="font-size:16px;padding:4px">⚙️</button>
     </div>
   </div>
-  <div class="tabs" id="tabBar"></div>
+  <div class="tabs" id="warmupTabBar"></div>
+  <div class="tabs" id="tabBar" style="margin-top:8px"></div>
   <div id="daySubLabel" style="text-align:center;font-size:15px;color:var(--text2);padding:5px 0 2px;"></div>
   <div id="daySubLabel" style="text-align:center;font-size:15px;color:var(--text2);padding:4px 0 8px;"></div>
 </header>
@@ -574,16 +574,17 @@ function exState(id, defaultSets){
 /* ── Build ── */
 function build(){
   const bar = document.getElementById('tabBar');
+  const warmupBar = document.getElementById('warmupTabBar');
   const main = document.getElementById('mainContent');
 
-  // 上肢拉伸 / 下肢拉伸 — 各自獨立分頁，放最前面
+  // 上肢拉伸 / 下肢拉伸 — 獨立一排，跟訓練日分頁分開
   ['upper','lower'].forEach(type => {
     const btn = document.createElement('button');
     btn.className = 'tab-btn';
     btn.dataset.tabkey = 'warmup-' + type;
     btn.innerHTML = (type==='upper' ? '🧘 上肢拉伸' : '🧘 下肢拉伸');
     btn.onclick = () => switchTab('warmup-' + type);
-    bar.appendChild(btn);
+    warmupBar.appendChild(btn);
 
     const panel = document.createElement('div');
     panel.id = 'panel-warmup-' + type;
