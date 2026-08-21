@@ -109,32 +109,32 @@ main{padding:12px}
   padding:0 2px;
 }
 
-.warmup-box{
-  border:0.5px solid var(--border);
-  border-radius:var(--radius);
-  margin-bottom:14px;
-  overflow:hidden;
+.subtab-bar{
+  display:flex;gap:6px;margin-bottom:14px;
 }
-.warmup-toggle{
-  width:100%;
+.subtab-btn{
+  flex:1;
   background:var(--bg2);
-  border:none;
+  border:0.5px solid var(--border);
+  border-radius:10px;
   color:var(--text2);
   font-size:15px;
-  padding:10px 14px;
-  display:flex;align-items:center;justify-content:space-between;
+  padding:9px 0;
   cursor:pointer;
   font-family:inherit;
+  transition:background .12s,color .12s,border-color .12s;
 }
-.warmup-toggle .chev{transition:transform .15s;color:var(--text3)}
-.warmup-toggle.open .chev{transform:rotate(90deg)}
-.warmup-list{display:none;padding:2px 14px 10px}
-.warmup-list.open{display:block}
-.warmup-item{padding:7px 0;border-top:0.5px solid var(--border)}
-.warmup-item:first-child{border-top:none}
-.warmup-item-name{font-size:14px;color:var(--text);font-weight:500;display:flex;justify-content:space-between}
+.subtab-btn.active{
+  background:rgba(240,160,48,0.12);
+  border-color:var(--border-accent,var(--accent));
+  color:var(--accent);
+  font-weight:500;
+}
+.warmup-sub{display:none}
+.warmup-sub.active{display:block}
+.warmup-item-name{font-size:15px;color:var(--text);font-weight:500;display:flex;justify-content:space-between}
 .warmup-item-dur{color:var(--accent);font-weight:400;font-size:13px}
-.warmup-item-desc{font-size:13px;color:var(--text3);margin-top:2px;line-height:1.5}
+.warmup-item-desc{font-size:14px;color:var(--text3);margin-top:4px;line-height:1.55}
 
 .ex-card{
   background:var(--bg2);
@@ -623,36 +623,37 @@ function exState(id, defaultSets){
 }
 
 /* ── Build ── */
-function warmupHTML(type, dayIndex){
-  const w = WARMUPS[type];
-  const items = w.items.map(it => `
-    <div class="warmup-item">
-      <div class="warmup-item-name"><span>${it.name}</span><span class="warmup-item-dur">${it.dur}</span></div>
-      <div class="warmup-item-desc">${it.desc}</div>
-    </div>`).join('');
-  return `<div class="warmup-box">
-    <button class="warmup-toggle" id="wt-${dayIndex}" onclick="toggleWarmup(${dayIndex})">
-      <span>🧘 ${w.label}</span>
-      <span class="chev">›</span>
-    </button>
-    <div class="warmup-list" id="wl-${dayIndex}">${items}</div>
-  </div>`;
-}
-
-function toggleWarmup(dayIndex){
-  document.getElementById('wt-' + dayIndex).classList.toggle('open');
-  document.getElementById('wl-' + dayIndex).classList.toggle('open');
-}
-
 function build(){
   const bar = document.getElementById('tabBar');
   const main = document.getElementById('mainContent');
 
+  // 練前拉伸 — 獨立分頁，放最前面
+  const warmupBtn = document.createElement('button');
+  warmupBtn.className = 'tab-btn';
+  warmupBtn.dataset.tabkey = 'warmup';
+  warmupBtn.innerHTML = '🧘 練前拉伸';
+  warmupBtn.onclick = () => switchTab('warmup');
+  bar.appendChild(warmupBtn);
+
+  const warmupPanel = document.createElement('div');
+  warmupPanel.id = 'panel-warmup';
+  warmupPanel.className = 'day-panel';
+  warmupPanel.innerHTML = `
+    <div class="subtab-bar">
+      <button class="subtab-btn active" id="wst-upper" onclick="switchWarmupSub('upper')">上肢</button>
+      <button class="subtab-btn" id="wst-lower" onclick="switchWarmupSub('lower')">下肢</button>
+    </div>
+    <div id="warmup-sub-upper" class="warmup-sub active">${warmupListHTML('upper')}</div>
+    <div id="warmup-sub-lower" class="warmup-sub">${warmupListHTML('lower')}</div>
+  `;
+  main.appendChild(warmupPanel);
+
   DAYS.forEach((day, i) => {
     const btn = document.createElement('button');
     btn.className = 'tab-btn' + (i===0 ? ' active' : '');
+    btn.dataset.tabkey = String(i);
     btn.innerHTML = day.label;
-    btn.onclick = () => switchDay(i);
+    btn.onclick = () => switchTab(i);
     bar.appendChild(btn);
 
     const panel = document.createElement('div');
@@ -661,7 +662,6 @@ function build(){
 
     let html = `<div class="principle">${day.principle}</div>`;
     if(day.skipNote) html += `<div class="skip-note">${day.skipNote}</div>`;
-    if(day.warmup && WARMUPS[day.warmup]) html += warmupHTML(day.warmup, i);
 
     let skip = false;
     day.exercises.forEach((ex_, j) => {
@@ -693,6 +693,22 @@ function build(){
     panel.innerHTML = html;
     main.appendChild(panel);
   });
+}
+
+function warmupListHTML(type){
+  const w = WARMUPS[type];
+  return w.items.map(it => `
+    <div class="ex-card">
+      <div class="warmup-item-name"><span>${it.name}</span><span class="warmup-item-dur">${it.dur}</span></div>
+      <div class="warmup-item-desc">${it.desc}</div>
+    </div>`).join('');
+}
+
+function switchWarmupSub(type){
+  document.getElementById('wst-upper').classList.toggle('active', type==='upper');
+  document.getElementById('wst-lower').classList.toggle('active', type==='lower');
+  document.getElementById('warmup-sub-upper').classList.toggle('active', type==='upper');
+  document.getElementById('warmup-sub-lower').classList.toggle('active', type==='lower');
 }
 
 function exCard(ex_, inSuper){
@@ -838,12 +854,18 @@ function removeRow(exId, type){
 
 
 /* ── Actions ── */
-function switchDay(n){
-  document.querySelectorAll('.tab-btn').forEach((b,i) => b.className = 'tab-btn' + (i===n?' active':''));
-  document.querySelectorAll('.day-panel').forEach((p,i) => p.className = 'day-panel' + (i===n?' active':''));
-  window.scrollTo({top:0,behavior:'smooth'});
+function switchTab(key){
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.tabkey === String(key));
+  });
+  document.querySelectorAll('.day-panel').forEach(p => {
+    p.classList.toggle('active', p.id === 'panel-' + key);
+  });
+  const activeBtn = document.querySelector('.tab-btn[data-tabkey="' + key + '"]');
+  if(activeBtn) activeBtn.scrollIntoView({behavior:'smooth', block:'nearest', inline:'center'});
+  window.scrollTo({top:0, behavior:'smooth'});
   const sub = document.getElementById('daySubLabel');
-  if(sub) sub.textContent = DAYS[n].sublabel;
+  if(sub) sub.textContent = (key === 'warmup') ? '訓練前熱身伸展' : (DAYS[key] ? DAYS[key].sublabel : '');
 }
 
 function editCue(exId){
