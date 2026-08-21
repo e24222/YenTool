@@ -498,9 +498,7 @@ async function loadFromGist(){
       if(Object.keys(remote).length > 0){
         S = remote;
         localStorage.setItem('wo_v3', JSON.stringify(S));
-        // re-render to reflect loaded data
-        document.getElementById('tabBar').innerHTML = '';
-        document.getElementById('mainContent').innerHTML = '';
+        // build() 現在會自己清空重繪，這裡不用再手動清
         build();
       }
     }
@@ -580,6 +578,10 @@ function build(){
   const bar = document.getElementById('tabBar');
   const warmupBar = document.getElementById('warmupTabBar');
   const main = document.getElementById('mainContent');
+  // build() 可能被呼叫不只一次（例如 Gist 同步完成後），自己清空避免重複疊加按鈕/面板
+  bar.innerHTML = '';
+  warmupBar.innerHTML = '';
+  main.innerHTML = '';
 
   // 上肢拉伸 / 下肢拉伸 — 獨立一排，跟訓練日分頁分開
   ['upper','lower'].forEach(type => {
