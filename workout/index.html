@@ -109,6 +109,33 @@ main{padding:12px}
   padding:0 2px;
 }
 
+.warmup-box{
+  border:0.5px solid var(--border);
+  border-radius:var(--radius);
+  margin-bottom:14px;
+  overflow:hidden;
+}
+.warmup-toggle{
+  width:100%;
+  background:var(--bg2);
+  border:none;
+  color:var(--text2);
+  font-size:15px;
+  padding:10px 14px;
+  display:flex;align-items:center;justify-content:space-between;
+  cursor:pointer;
+  font-family:inherit;
+}
+.warmup-toggle .chev{transition:transform .15s;color:var(--text3)}
+.warmup-toggle.open .chev{transform:rotate(90deg)}
+.warmup-list{display:none;padding:2px 14px 10px}
+.warmup-list.open{display:block}
+.warmup-item{padding:7px 0;border-top:0.5px solid var(--border)}
+.warmup-item:first-child{border-top:none}
+.warmup-item-name{font-size:14px;color:var(--text);font-weight:500;display:flex;justify-content:space-between}
+.warmup-item-dur{color:var(--accent);font-weight:400;font-size:13px}
+.warmup-item-desc{font-size:13px;color:var(--text3);margin-top:2px;line-height:1.5}
+
 .ex-card{
   background:var(--bg2);
   border:0.5px solid var(--border);
@@ -337,6 +364,7 @@ const DAYS = [
   {
     id:'upper-a', label:'上肢 A', sublabel:'胸背推拉',
     principle:'3組12下 ／ 肩推3組10下 ／ 手臂2組12下',
+    warmup:'upper',
     exercises:[
       {id:'ua1', name:'上斜機械推',
         cue:'把手對準乳頭上鎖骨下，屁股坐到底、背貼緊，胸口迎向把手往斜前上方推',
@@ -361,6 +389,7 @@ const DAYS = [
   {
     id:'lower-a', label:'下肢 A', sublabel:'股四頭主',
     principle:'腿推4組10下 ／ 其餘3組12下 ／ 核心3組15下',
+    warmup:'lower',
     exercises:[
       {id:'la1', name:'腿推機', isNew:true,
         cue:'雙腳與肩同寬，腳尖微外八，背貼緊背墊，膝蓋不鎖死',
@@ -376,6 +405,7 @@ const DAYS = [
   {
     id:'upper-b', label:'上肢 B', sublabel:'背肩主',
     principle:'3組12下 ／ 側平舉3組15下',
+    warmup:'upper',
     exercises:[
       {id:'ub1', name:'坐姿划船',
         cue:'收肩完再拉，頂點停頓',
@@ -401,6 +431,7 @@ const DAYS = [
     id:'lower-b', label:'下肢 B', sublabel:'後鏈主',
     principle:'六角槓硬舉4組8下（重新開始先用輕重量）／其餘3組12下／核心3組15下',
     skipNote:'★ 忙或沒恢復可跳過這天',
+    warmup:'lower',
     exercises:[
       {id:'lb0', name:'六角槓硬舉', isNew:true,
         cue:'★新加入，補臀肌與後側鏈；復健後重新開始，第一週先用輕重量，確認核心穩定再往上加',
@@ -417,6 +448,30 @@ const DAYS = [
     ]
   }
 ];
+
+const WARMUPS = {
+  upper: {
+    label: '練前上肢拉伸',
+    items: [
+      {name:'貓牛式', dur:'30秒', desc:'四足跪姿，吸氣塌腰抬頭、吐氣拱背低頭，鬆脊椎和肩胛'},
+      {name:'穿針式', dur:'左右各30秒', desc:'四足跪姿，一手穿過對側腋下貼地，伸展肩胛/上背'},
+      {name:'小狗延伸式', dur:'45秒', desc:'跪姿，臀部坐向腳跟、雙手向前伸直貼地，重點伸展肩膀和闊背肌'},
+      {name:'跪姿手臂交叉伸展', dur:'左右各20秒', desc:'跪坐，手臂橫過胸前用另一手輕壓，伸展三角肌後側'},
+      {name:'過頭三頭肌伸展', dur:'左右各20秒', desc:'跪坐或盤坐，手肘向上彎曲手摸背，另一手輕扶手肘往內壓'},
+    ]
+  },
+  lower: {
+    label: '練前下肢拉伸',
+    items: [
+      {name:'嬰兒式', dur:'30秒', desc:'跪坐後臀部坐向腳跟，上身前趴，鬆腰椎和髖屈肌'},
+      {name:'鴿式', dur:'左右各45秒', desc:'前腿彎曲外開、後腿伸直後方，重點伸展臀肌和梨狀肌'},
+      {name:'蝴蝶式', dur:'30秒', desc:'坐姿，腳掌相對、膝蓋自然下沉，可微微前傾，伸展內收肌'},
+      {name:'躺姿抱膝', dur:'左右各20秒', desc:'仰躺，單腳膝蓋抱向胸口，伸展臀部和下背'},
+      {name:'躺姿股四頭肌伸展', dur:'左右各20秒', desc:'側躺，抓腳踝往臀部方向拉，伸展股四頭肌'},
+      {name:'坐姿體前彎', dur:'30秒', desc:'坐姿雙腿伸直，上身前傾摸腳，伸展膕繩肌'},
+    ]
+  }
+};
 
 const EX_DEFAULT_CUE = {};
 const EX_MAP = {};
@@ -568,6 +623,27 @@ function exState(id, defaultSets){
 }
 
 /* ── Build ── */
+function warmupHTML(type, dayIndex){
+  const w = WARMUPS[type];
+  const items = w.items.map(it => `
+    <div class="warmup-item">
+      <div class="warmup-item-name"><span>${it.name}</span><span class="warmup-item-dur">${it.dur}</span></div>
+      <div class="warmup-item-desc">${it.desc}</div>
+    </div>`).join('');
+  return `<div class="warmup-box">
+    <button class="warmup-toggle" id="wt-${dayIndex}" onclick="toggleWarmup(${dayIndex})">
+      <span>🧘 ${w.label}</span>
+      <span class="chev">›</span>
+    </button>
+    <div class="warmup-list" id="wl-${dayIndex}">${items}</div>
+  </div>`;
+}
+
+function toggleWarmup(dayIndex){
+  document.getElementById('wt-' + dayIndex).classList.toggle('open');
+  document.getElementById('wl-' + dayIndex).classList.toggle('open');
+}
+
 function build(){
   const bar = document.getElementById('tabBar');
   const main = document.getElementById('mainContent');
@@ -585,6 +661,7 @@ function build(){
 
     let html = `<div class="principle">${day.principle}</div>`;
     if(day.skipNote) html += `<div class="skip-note">${day.skipNote}</div>`;
+    if(day.warmup && WARMUPS[day.warmup]) html += warmupHTML(day.warmup, i);
 
     let skip = false;
     day.exercises.forEach((ex_, j) => {
