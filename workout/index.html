@@ -269,38 +269,29 @@ main{padding:12px}
 
 <div class="toast" id="toast"></div>
 
-<!-- Token overlay -->
+<!-- Account overlay -->
 <div id="tokenOverlay" style="display:none;position:fixed;inset:0;z-index:200;
   background:rgba(0,0,0,0.7);align-items:center;justify-content:center;padding:24px">
   <div style="background:var(--bg2);border-radius:16px;padding:24px;width:100%;max-width:360px">
-    <div style="font-size:16px;font-weight:600;margin-bottom:8px">GitHub Token 設定</div>
-    <div style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6">
-      輸入有 <code style="background:var(--bg3);padding:1px 5px;border-radius:4px">gist</code> 權限的 GitHub Token，資料將存在私人 Gist。
-    </div>
-    <input id="tokenInput" type="password"
-      placeholder="ghp_xxxxxxxxxxxx"
-      style="width:100%;background:var(--bg3);border:0.5px solid var(--border);
-        border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;
-        font-family:inherit;margin-bottom:12px"
-      value="">
-    <div id="tokenTestResult" style="font-size:13px;min-height:18px;margin-bottom:8px;text-align:center"></div>
-    <div style="display:flex;gap:10px;margin-bottom:10px">
-      <button onclick="applyToken()"
+    <div style="font-size:16px;font-weight:600;margin-bottom:8px">雲端同步</div>
+    <div id="accountInfo" style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6"></div>
+    <div style="display:flex;gap:10px">
+      <button id="loginBtn" onclick="fbLogin()"
         style="flex:1;background:var(--accent);border:none;border-radius:10px;
           color:#000;font-size:15px;font-weight:600;padding:11px;cursor:pointer;font-family:inherit">
-        儲存
+        使用 Google 登入
+      </button>
+      <button id="logoutBtn" onclick="fbLogout()"
+        style="flex:1;background:var(--bg3);border:none;border-radius:10px;display:none;
+          color:var(--text);font-size:15px;padding:11px;cursor:pointer;font-family:inherit">
+        登出
       </button>
       <button onclick="hideTokenUI()"
         style="flex:1;background:var(--bg3);border:none;border-radius:10px;
           color:var(--text);font-size:15px;padding:11px;cursor:pointer;font-family:inherit">
-        取消
+        關閉
       </button>
     </div>
-    <button onclick="testToken()"
-      style="width:100%;background:none;border:0.5px solid var(--border);border-radius:10px;
-        color:var(--text2);font-size:14px;padding:10px;cursor:pointer;font-family:inherit">
-      🔍 測試連線
-    </button>
   </div>
 </div>
 
@@ -448,117 +439,166 @@ DAYS.forEach(day => day.exercises.forEach(ex_ => {
     sets: [{wt:'', c:'', r:''}]   // per-set data
   }
 */
-const GIST_ID = '0e147446e07570f668fbaa8dbd451799';
-const GIST_FILE = 'yentool-workout.json';
+/* ── Firebase 同步 ──
+  所有登入者共用同一份：workout/{exId} = { data: JSON字串, updatedAt: 毫秒 }
+  以動作為單位、誰比較新就用誰的（last-write-wins per exercise），不再整包覆蓋。
+*/
+const FIREBASE_CONFIG = { // 網頁用的公開設定，不是機密；資料安全靠 Firestore 規則與 Google 登入
+  apiKey: "AIzaSyA_Z9EBIaiFfatRv98MOK9AWXs4pgtWUNM",
+  authDomain: "alpha-f914f.firebaseapp.com",
+  projectId: "alpha-f914f",
+  storageBucket: "alpha-f914f.firebasestorage.app",
+  messagingSenderId: "474296722006",
+  appId: "1:474296722006:web:b5d470c6826227443591f7"
+};
+const FB_BASE = 'https://www.gstatic.com/firebasejs/11.10.0/';
 let S = {};
+let TS = {};      // exId -> 本機最後編輯時間
+let PUSHED = {};  // exId -> 已成功上傳的時間
 let _syncTimer = null;
+let _fb = null;   // { auth, db, fns, user, unsub }
 
-function getToken(){ return localStorage.getItem('wo_token') || ''; }
-function saveToken(t){ localStorage.setItem('wo_token', t.trim()); }
-
+function readJSON(k){ try { return JSON.parse(localStorage.getItem(k) || '{}') || {}; } catch(e){ return {}; } }
 function load(){
-  try { S = JSON.parse(localStorage.getItem('wo_v3') || '{}'); } catch(e){ S = {}; }
+  S = readJSON('wo_v3');
+  TS = readJSON('wo_ts');
+  PUSHED = readJSON('wo_pushed');
+  localStorage.removeItem('wo_token'); // 舊的 GitHub token 不再使用
 }
-function save(){
+function persist(){
   localStorage.setItem('wo_v3', JSON.stringify(S));
+  localStorage.setItem('wo_ts', JSON.stringify(TS));
+  localStorage.setItem('wo_pushed', JSON.stringify(PUSHED));
+}
+// ids：這次改到的動作 id（字串或陣列）；不給就視為全部
+function save(ids){
+  const now = Date.now();
+  (ids ? [].concat(ids) : Object.keys(S)).forEach(id => { TS[id] = now; });
+  persist();
   schedulSync();
 }
 
 function schedulSync(){
   clearTimeout(_syncTimer);
-  _syncTimer = setTimeout(syncToGist, 1500);
+  _syncTimer = setTimeout(pushDirty, 1500);
 }
 
-async function syncToGist(){
-  const token = getToken();
-  if(!token) return;
+async function pushDirty(){
+  if(!_fb || !_fb.user) return;
+  const { db, user, fns } = _fb;
+  const dirty = Object.keys(S).filter(id => TS[id] && TS[id] > (PUSHED[id] || 0));
+  if(!dirty.length) return;
   setSyncStatus('syncing');
   try {
-    const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
-      method: 'PATCH',
-      headers: {
-        'Authorization': `token ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ files: { [GIST_FILE]: { content: JSON.stringify(S) } } })
-    });
-    if(!res.ok) throw new Error(res.status);
+    await Promise.all(dirty.map(async id => {
+      const ts = TS[id];
+      await fns.setDoc(fns.doc(db, 'workout', encodeURIComponent(id)),
+        { data: JSON.stringify(S[id]), updatedAt: ts });
+      PUSHED[id] = Math.max(PUSHED[id] || 0, ts);
+    }));
+    persist();
     setSyncStatus('ok');
   } catch(e) {
     setSyncStatus('err');
   }
 }
 
-async function loadFromGist(){
-  const token = getToken();
-  if(!token){ showTokenUI(); return; }
-  setSyncStatus('syncing');
+function applySnapshot(snap){
+  const remoteIds = new Set();
+  let changed = false;
+  snap.docs.forEach(d => {
+    const id = decodeURIComponent(d.id);
+    remoteIds.add(id);
+    if(d.metadata.hasPendingWrites) return; // 自己剛寫的，不用回灌
+    const { data, updatedAt } = d.data();
+    if(typeof data !== 'string' || !(updatedAt > (TS[id] || 0))) return;
+    try { S[id] = JSON.parse(data); } catch(e){ return; }
+    TS[id] = PUSHED[id] = updatedAt;
+    changed = true;
+  });
+  // 第一次登入：本機有、雲端沒有的動作（舊資料）補上傳
+  Object.keys(S).forEach(id => {
+    if(!remoteIds.has(id) && !PUSHED[id]){ TS[id] = TS[id] || 1; }
+  });
+  persist();
+  if(changed) rebuildSoon();
+  schedulSync();
+  setSyncStatus('ok');
+}
+
+function rebuildSoon(){
+  const a = document.activeElement;
+  if(a && /^(INPUT|TEXTAREA)$/.test(a.tagName)){ setTimeout(rebuildSoon, 1000); return; }
+  build();
+}
+
+async function initFirebase(){
+  if(!FIREBASE_CONFIG){ setSyncStatus('off'); return; }
   try {
-    const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
-      headers: { 'Authorization': `token ${token}` }
-    });
-    if(res.status === 401){ showTokenUI(); setSyncStatus('err'); return; }
-    if(!res.ok) throw new Error(res.status);
-    const data = await res.json();
-    const content = data.files[GIST_FILE]?.content;
-    if(content){
-      const remote = JSON.parse(content);
-      if(Object.keys(remote).length > 0){
-        S = remote;
-        localStorage.setItem('wo_v3', JSON.stringify(S));
-        // build() 現在會自己清空重繪，這裡不用再手動清
-        build();
+    const [app, auth, fs] = await Promise.all([
+      import(FB_BASE + 'firebase-app.js'),
+      import(FB_BASE + 'firebase-auth.js'),
+      import(FB_BASE + 'firebase-firestore.js')
+    ]);
+    const a = app.initializeApp(FIREBASE_CONFIG);
+    _fb = { auth: auth.getAuth(a), db: fs.getFirestore(a), fns: { ...auth, ...fs }, user: null, unsub: null };
+    auth.onAuthStateChanged(_fb.auth, user => {
+      _fb.user = user;
+      if(_fb.unsub){ _fb.unsub(); _fb.unsub = null; }
+      if(user){
+        setSyncStatus('syncing');
+        _fb.unsub = fs.onSnapshot(fs.collection(_fb.db, 'workout'), applySnapshot, () => setSyncStatus('err'));
+      } else {
+        setSyncStatus('off');
+        showTokenUI();
       }
-    }
-    setSyncStatus('ok');
+      renderAccount();
+    });
   } catch(e) {
     setSyncStatus('err');
   }
+}
+
+async function fbLogin(){
+  if(!_fb) return;
+  try { await _fb.fns.signInWithPopup(_fb.auth, new _fb.fns.GoogleAuthProvider()); hideTokenUI(); }
+  catch(e){ toast('登入失敗：' + (e.code || e.message)); }
+}
+async function fbLogout(){
+  if(_fb) await _fb.fns.signOut(_fb.auth);
 }
 
 function setSyncStatus(state){
   const el = document.getElementById('syncStatus');
   if(!el) return;
-  const map = { syncing:'☁️', ok:'✓', err:'⚠️' };
-  const color = { syncing:'var(--text3)', ok:'var(--green)', err:'#ff6b6b' };
+  const map = { syncing:'☁️', ok:'✓', err:'⚠️', off:'☁️' };
+  const color = { syncing:'var(--text3)', ok:'var(--green)', err:'#ff6b6b', off:'var(--text3)' };
+  const title = { syncing:'同步中…', ok:'已同步', err:'同步失敗（可離線使用，恢復連線後自動補傳）', off:'尚未登入，資料只存在這台裝置' };
   el.textContent = map[state] || '';
   el.style.color = color[state] || 'var(--text3)';
-  el.title = state === 'err' ? '同步失敗，請檢查 token' : state === 'syncing' ? '同步中…' : '已同步';
+  el.title = title[state] || '';
+}
+
+function renderAccount(){
+  const info = document.getElementById('accountInfo');
+  const login = document.getElementById('loginBtn');
+  const logout = document.getElementById('logoutBtn');
+  if(!info) return;
+  const user = _fb && _fb.user;
+  if(!FIREBASE_CONFIG) info.textContent = '尚未設定 Firebase，資料只存在這台裝置。';
+  else if(!_fb) info.textContent = '雲端連線載入中，或目前離線…';
+  else if(user) info.textContent = '已登入：' + (user.email || user.displayName) + '。課表是大家共用的，會自動同步。';
+  else info.textContent = '登入後，可以和其他人共用並同步同一份課表。';
+  login.style.display = (_fb && !user) ? '' : 'none';
+  logout.style.display = user ? '' : 'none';
 }
 
 function showTokenUI(){
+  renderAccount();
   document.getElementById('tokenOverlay').style.display = 'flex';
-  const inp = document.getElementById('tokenInput');
-  if(inp) inp.value = getToken();
-  const res = document.getElementById('tokenTestResult');
-  if(res) res.textContent = '';
 }
 function hideTokenUI(){
   document.getElementById('tokenOverlay').style.display = 'none';
-}
-
-async function testToken(){
-  const t = document.getElementById('tokenInput').value.trim() || getToken();
-  const res = document.getElementById('tokenTestResult');
-  if(!t){ res.style.color='var(--text3)'; res.textContent='尚未輸入 Token'; return; }
-  res.style.color='var(--text3)'; res.textContent='測試中…';
-  try{
-    const r = await fetch('https://api.github.com/gists/' + GIST_ID, {
-      headers:{'Authorization':'token '+t}
-    });
-    if(r.ok){ res.style.color='var(--green)'; res.textContent='✅ 連線正常，Gist 可存取'; }
-    else if(r.status===401){ res.style.color='#ff6b6b'; res.textContent='❌ Token 無效或已失效'; }
-    else { res.style.color='#ff6b6b'; res.textContent='❌ 錯誤：'+r.status; }
-  }catch(e){
-    res.style.color='#ff6b6b'; res.textContent='❌ 網路錯誤';
-  }
-}
-function applyToken(){
-  const t = document.getElementById('tokenInput').value.trim();
-  if(!t) return;
-  saveToken(t);
-  hideTokenUI();
-  loadFromGist();
 }
 
 const DEFAULT_EMOJIS = ['👍','✅'];
@@ -586,7 +626,7 @@ function build(){
   const bar = document.getElementById('tabBar');
   const warmupBar = document.getElementById('warmupTabBar');
   const main = document.getElementById('mainContent');
-  // build() 可能被呼叫不只一次（例如 Gist 同步完成後），自己清空避免重複疊加按鈕/面板
+  // build() 可能被呼叫不只一次（例如雲端同步收到更新後），自己清空避免重複疊加按鈕/面板
   bar.innerHTML = '';
   warmupBar.innerHTML = '';
   main.innerHTML = '';
@@ -755,7 +795,7 @@ function singleRowHTML(exId, type, i, s){
 function setRowField(exId, type, i, field, val){
   if(!S[exId]?.[type]) return;
   S[exId][type][i][field] = val;
-  save();
+  save(exId);
 }
 
 function copyPbToWeek(exId){
@@ -763,7 +803,7 @@ function copyPbToWeek(exId){
   if(!d?.b) return;
   if(!confirm('將 👍 的內容覆蓋到 ✅？')) return;
   d.w = d.b.map(s => ({...s}));
-  save();
+  save(exId);
   // re-render ✅ section
   const col = document.getElementById('sets-' + exId + '-w');
   if(!col) return;
@@ -781,7 +821,7 @@ function addRow(exId, type){
   const arr = d[type];
   const last = arr[arr.length-1] || {wt:'',c:'',r:''};
   arr.push({wt:'', c:last.c, r:last.r});
-  save();
+  save(exId);
   const col = document.getElementById('sets-'+exId+'-'+type);
   const div = document.createElement('div');
   div.innerHTML = singleRowHTML(exId, type, arr.length-1, arr[arr.length-1]);
@@ -792,7 +832,7 @@ function removeRow(exId, type){
   const d = S[exId]; if(!d) return;
   const arr = d[type];
   if(arr.length <= 1) return;
-  arr.pop(); save();
+  arr.pop(); save(exId);
   const col = document.getElementById('sets-'+exId+'-'+type);
   col.removeChild(col.lastElementChild);
 }
@@ -841,7 +881,7 @@ function editCue(exId){
 function setCue(id, val){
   if(!S[id]) S[id] = {};
   S[id].cue = val;
-  save();
+  save(id);
 }
 
 
@@ -934,7 +974,7 @@ function completeDay(di){
       if(bestEl) bestEl.innerHTML = renderBestText(d.b, inverse);
     }
   });
-  save();
+  save(day.exercises.map(e => e.id));
   let msg = count > 0 ? `已記錄 ${count} 個動作的本日分數` : '本週欄位還沒有填寫任何重量／次數';
   if(prCount > 0) msg += ` 🎉 ${prCount} 個新紀錄！`;
   toast(msg);
@@ -1021,7 +1061,7 @@ load();
 build();
 const _initSub = document.getElementById('daySubLabel');
 if(_initSub) _initSub.textContent = DAYS[0].sublabel;
-loadFromGist();
+initFirebase();
 </script>
 </body>
 </html>
