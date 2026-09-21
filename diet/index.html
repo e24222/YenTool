@@ -419,18 +419,31 @@ main{max-width:520px;margin:0 auto;padding:20px 18px 0}
 
 <div id="tokenOverlay">
   <div class="tokenbox">
-    <h3>🔐 連結你的資料</h3>
-    <p>輸入有 <code>gist</code> 權限的 GitHub Token，這台裝置就能讀取／更新你的飲食紀錄（跟聊天室是同一份資料）。</p>
-    <input id="tokenInput" type="password" placeholder="ghp_xxxxxxxxxxxx">
-    <div id="tokenTestResult"></div>
+    <h3>☁️ 雲端同步</h3>
+    <p id="accountInfo"></p>
     <div class="actions" style="display:flex;gap:10px">
       <button class="btn ghost" onclick="hideTokenUI()">關閉</button>
-      <button class="btn primary" onclick="applyToken()">儲存並連結</button>
+      <button class="btn primary" id="loginBtn" onclick="fbLogin()">使用 Google 登入</button>
+      <button class="btn ghost" id="logoutBtn" onclick="fbLogout()" style="display:none">登出</button>
     </div>
   </div>
 </div>
 
 <script>
+/* ── Firebase 同步 ──
+  所有登入者共用：diet/targets、diet/{YYYY-MM-DD} = { data: JSON字串, updatedAt: 毫秒 }
+  以「一天」為單位，誰比較新就用誰的，不再整包覆蓋。
+*/
+const FIREBASE_CONFIG = { // 網頁用的公開設定，不是機密；資料安全靠 Firestore 規則與 Google 登入
+  apiKey: "AIzaSyA_Z9EBIaiFfatRv98MOK9AWXs4pgtWUNM",
+  authDomain: "alpha-f914f.firebaseapp.com",
+  projectId: "alpha-f914f",
+  storageBucket: "alpha-f914f.firebasestorage.app",
+  messagingSenderId: "474296722006",
+  appId: "1:474296722006:web:b5d470c6826227443591f7"
+};
+const FB_BASE = 'https://www.gstatic.com/firebasejs/11.10.0/';
+// 舊的 Gist：只用來第一次登入時「唯讀匯入」歷史紀錄（不需要 token）
 const GIST_ID = '753eefa68ad8cb692c64908125e8c48d';
 const GIST_FILE = 'yentool-diet.json';
 const DEFAULT_TARGETS = {water_cc:4500, protein_g:150, fat_g:80, carb_g:210, kcal:2160};
@@ -438,6 +451,10 @@ const DEFAULT_TARGETS = {water_cc:4500, protein_g:150, fat_g:80, carb_g:210, kca
 let D = { targets: {...DEFAULT_TARGETS}, days: {} };
 let curDate = todayStr();
 let _syncTimer = null;
+let TS = {};      // key -> 本機最後編輯時間
+let SYNCED = {};  // key -> 上次確認與雲端一致的 JSON 字串
+let LAST = {};    // key -> 本機上次看到的 JSON（用來偵測哪一天被改）
+let _fb = null;   // { auth, db, fns, user, unsub }
 
 function todayStr(){
   const d = new Date();
@@ -445,90 +462,184 @@ function todayStr(){
   return `${y}-${m}-${day}`;
 }
 
-function getToken(){ return localStorage.getItem('diet_token') || ''; }
-function saveToken(t){ localStorage.setItem('diet_token', t.trim()); }
+function readJSON(k){ try { return JSON.parse(localStorage.getItem(k) || '{}') || {}; } catch(e){ return {}; } }
+function syncKeys(){ return ['targets', ...Object.keys(D.days)]; }
+function valueOf(k){ return k === 'targets' ? D.targets : D.days[k]; }
+function isBlank(k){
+  const v = valueOf(k);
+  if(k === 'targets') return JSON.stringify(v) === JSON.stringify(DEFAULT_TARGETS);
+  return !v || ((v.water_cc||0) === 0 && !(v.meals||[]).length);
+}
+// 從沒同步過、又是空白的（例如只是瀏覽某天而自動建立的空日子）不上傳，避免蓋掉雲端真資料
+function skippable(k){ return isBlank(k) && !(k in SYNCED); }
 
 function load(){
   try { D = JSON.parse(localStorage.getItem('diet_cache') || 'null') || { targets:{...DEFAULT_TARGETS}, days:{} }; }
   catch(e){ D = { targets:{...DEFAULT_TARGETS}, days:{} }; }
+  if(!D.days) D.days = {};
+  if(!D.targets) D.targets = {...DEFAULT_TARGETS};
+  TS = readJSON('diet_ts');
+  SYNCED = readJSON('diet_synced');
+  localStorage.removeItem('diet_token'); // 舊的 GitHub token 不再使用
+  LAST = {};
+  syncKeys().forEach(k => { LAST[k] = JSON.stringify(valueOf(k)); });
 }
-function cacheLocal(){ localStorage.setItem('diet_cache', JSON.stringify(D)); }
+function persistMeta(){
+  localStorage.setItem('diet_ts', JSON.stringify(TS));
+  localStorage.setItem('diet_synced', JSON.stringify(SYNCED));
+}
+function touch(){
+  const now = Date.now();
+  syncKeys().forEach(k => {
+    const j = JSON.stringify(valueOf(k));
+    if(j === LAST[k]) return;
+    LAST[k] = j;
+    if(!skippable(k)) TS[k] = now;
+  });
+}
+function cacheLocal(){
+  localStorage.setItem('diet_cache', JSON.stringify(D));
+  touch();
+  persistMeta();
+}
 
 function scheduleSync(){
   clearTimeout(_syncTimer);
-  _syncTimer = setTimeout(syncToGist, 1200);
+  _syncTimer = setTimeout(pushDirty, 1200);
 }
 
-async function syncToGist(){
-  const token = getToken();
-  if(!token) return;
+async function pushDirty(){
+  if(!_fb || !_fb.user) return;
+  const { db, fns } = _fb;
+  const dirty = syncKeys().filter(k => JSON.stringify(valueOf(k)) !== SYNCED[k] && !skippable(k));
+  if(!dirty.length) return;
   setSyncStatus('syncing');
-  try{
-    const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
-      method:'PATCH',
-      headers:{ 'Authorization':`token ${token}`, 'Content-Type':'application/json' },
-      body: JSON.stringify({ files:{ [GIST_FILE]: { content: JSON.stringify(D) } } })
-    });
-    if(!res.ok) throw new Error(res.status);
+  try {
+    await Promise.all(dirty.map(async k => {
+      const j = JSON.stringify(valueOf(k));
+      await fns.setDoc(fns.doc(db, 'diet', k), { data: j, updatedAt: TS[k] || 1 });
+      SYNCED[k] = j;
+    }));
+    persistMeta();
     setSyncStatus('ok');
-  }catch(e){ setSyncStatus('err'); }
+  } catch(e) {
+    setSyncStatus('err');
+  }
 }
 
-async function loadFromGist(){
-  const token = getToken();
-  if(!token){ showTokenUI(); render(); return; }
-  setSyncStatus('syncing');
-  try{
-    const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, { headers:{ 'Authorization':`token ${token}` } });
-    if(res.status===401){ showTokenUI(); setSyncStatus('err'); render(); return; }
-    if(!res.ok) throw new Error(res.status);
-    const data = await res.json();
-    const content = data.files[GIST_FILE]?.content;
+function applySnapshot(snap){
+  let changed = false;
+  snap.docs.forEach(d => {
+    if(d.metadata.hasPendingWrites) return; // 自己剛寫的，不用回灌
+    const k = d.id;
+    const { data, updatedAt } = d.data();
+    if(typeof data !== 'string') return;
+    let v; try { v = JSON.parse(data); } catch(e){ return; }
+    if(updatedAt > (TS[k] || 0)){
+      if(k === 'targets') D.targets = v; else D.days[k] = v;
+      TS[k] = updatedAt;
+      SYNCED[k] = LAST[k] = JSON.stringify(v);
+      changed = true;
+    } else if(JSON.stringify(valueOf(k)) === JSON.stringify(v)){
+      SYNCED[k] = JSON.stringify(v);
+    }
+  });
+  if(changed) localStorage.setItem('diet_cache', JSON.stringify(D));
+  persistMeta();
+  if(changed) rerenderSoon();
+  if(snap.empty) importGistOnce();
+  scheduleSync();
+  setSyncStatus('ok');
+}
+
+function rerenderSoon(){
+  const a = document.activeElement;
+  if(a && /^(INPUT|TEXTAREA)$/.test(a.tagName)){ setTimeout(rerenderSoon, 1000); return; }
+  render();
+}
+
+// 雲端還是空的時候，把舊 Gist 的歷史紀錄唯讀匯入一次（不需要 token）
+async function importGistOnce(){
+  if(localStorage.getItem('diet_imported')) return;
+  try {
+    const res = await fetch(`https://api.github.com/gists/${GIST_ID}`);
+    if(!res.ok) return;
+    const content = (await res.json()).files[GIST_FILE]?.content;
     if(content){
       const remote = JSON.parse(content);
-      if(remote && remote.days){
-        D = remote;
-        cacheLocal();
-      }
+      Object.keys(remote.days || {}).forEach(k => {
+        if(isBlank(k)){ D.days[k] = remote.days[k]; TS[k] = 1; LAST[k] = JSON.stringify(D.days[k]); }
+      });
+      if(remote.targets && isBlank('targets')){ D.targets = remote.targets; TS.targets = 1; LAST.targets = JSON.stringify(D.targets); }
+      localStorage.setItem('diet_cache', JSON.stringify(D));
+      persistMeta();
+      render();
+      scheduleSync();
     }
-    setSyncStatus('ok');
-  }catch(e){ setSyncStatus('err'); }
-  render();
+    localStorage.setItem('diet_imported', '1');
+  } catch(e) { /* 下次登入再試 */ }
+}
+
+async function initFirebase(){
+  try {
+    const [app, auth, fs] = await Promise.all([
+      import(FB_BASE + 'firebase-app.js'),
+      import(FB_BASE + 'firebase-auth.js'),
+      import(FB_BASE + 'firebase-firestore.js')
+    ]);
+    const a = app.initializeApp(FIREBASE_CONFIG);
+    _fb = { auth: auth.getAuth(a), db: fs.getFirestore(a), fns: { ...auth, ...fs }, user: null, unsub: null };
+    auth.onAuthStateChanged(_fb.auth, user => {
+      _fb.user = user;
+      if(_fb.unsub){ _fb.unsub(); _fb.unsub = null; }
+      if(user){
+        setSyncStatus('syncing');
+        _fb.unsub = fs.onSnapshot(fs.collection(_fb.db, 'diet'), applySnapshot, () => setSyncStatus('err'));
+      } else {
+        setSyncStatus('off');
+        showTokenUI();
+      }
+      renderAccount();
+    });
+  } catch(e) {
+    setSyncStatus('err');
+  }
+}
+
+async function fbLogin(){
+  if(!_fb) return;
+  try { await _fb.fns.signInWithPopup(_fb.auth, new _fb.fns.GoogleAuthProvider()); hideTokenUI(); }
+  catch(e){ toast('登入失敗：' + (e.code || e.message)); }
+}
+async function fbLogout(){
+  if(_fb) await _fb.fns.signOut(_fb.auth);
 }
 
 function setSyncStatus(state){
   const el = document.getElementById('syncRow');
   if(!el) return;
-  const map = { syncing:'☁️ 同步中…', ok:'✓ 已同步', err:'⚠️ 同步失敗，點我設定 token' };
+  const map = { syncing:'☁️ 同步中…', ok:'✓ 已同步', err:'⚠️ 同步失敗（可離線使用），點我查看', off:'☁️ 尚未登入，點我登入' };
   el.textContent = map[state] || '';
 }
 
+function renderAccount(){
+  const info = document.getElementById('accountInfo');
+  const login = document.getElementById('loginBtn');
+  const logout = document.getElementById('logoutBtn');
+  if(!info) return;
+  const user = _fb && _fb.user;
+  if(!_fb) info.textContent = '雲端連線載入中，或目前離線…';
+  else if(user) info.textContent = '已登入：' + (user.email || user.displayName) + '。飲食紀錄是大家共用的，會自動同步。';
+  else info.textContent = '登入後，可以和其他人共用並同步同一份飲食紀錄。';
+  login.style.display = (_fb && !user) ? '' : 'none';
+  logout.style.display = user ? '' : 'none';
+}
+
 function showTokenUI(){
+  renderAccount();
   document.getElementById('tokenOverlay').style.display = 'flex';
-  const inp = document.getElementById('tokenInput');
-  if(inp) inp.value = getToken();
-  document.getElementById('tokenTestResult').textContent = '';
 }
 function hideTokenUI(){ document.getElementById('tokenOverlay').style.display = 'none'; }
-
-async function applyToken(){
-  const t = document.getElementById('tokenInput').value.trim();
-  const res = document.getElementById('tokenTestResult');
-  if(!t){ res.style.color='#c7a9a3'; res.textContent='尚未輸入 Token'; return; }
-  res.style.color='#c7a9a3'; res.textContent='驗證中…';
-  try{
-    const r = await fetch('https://api.github.com/gists/'+GIST_ID, { headers:{'Authorization':'token '+t} });
-    if(r.ok){
-      saveToken(t);
-      res.style.color='#7fae7f'; res.textContent='✅ 連結成功';
-      setTimeout(()=>{ hideTokenUI(); loadFromGist(); }, 500);
-    } else if(r.status===401){
-      res.style.color='#d17a7a'; res.textContent='❌ Token 無效或已失效';
-    } else {
-      res.style.color='#d17a7a'; res.textContent='❌ 錯誤：'+r.status;
-    }
-  }catch(e){ res.style.color='#d17a7a'; res.textContent='❌ 網路錯誤'; }
-}
 
 /* ── data helpers ── */
 function dayData(dateStr){
@@ -716,7 +827,7 @@ function jumpToDate(ds){
 /* ── init ── */
 load();
 render();
-loadFromGist();
+initFirebase();
 </script>
 </body>
 </html>
