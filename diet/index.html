@@ -423,26 +423,21 @@ main{max-width:520px;margin:0 auto;padding:20px 18px 0}
     <p id="accountInfo"></p>
     <div class="actions" style="display:flex;gap:10px">
       <button class="btn ghost" onclick="hideTokenUI()">關閉</button>
-      <button class="btn primary" id="loginBtn" onclick="fbLogin()">使用 Google 登入</button>
-      <button class="btn ghost" id="logoutBtn" onclick="fbLogout()" style="display:none">登出</button>
+      <button class="btn primary" id="loginBtn" onclick="sbLogin()">使用 Google 登入</button>
+      <button class="btn ghost" id="logoutBtn" onclick="sbLogout()" style="display:none">登出</button>
     </div>
   </div>
 </div>
 
 <script>
-/* ── Firebase 同步 ──
-  所有登入者共用：diet/targets、diet/{YYYY-MM-DD} = { data: JSON字串, updatedAt: 毫秒 }
+/* ── Supabase 同步 ──
+  資料表 public.diet：k = 'targets' 或 'YYYY-MM-DD'，data = JSON字串，updated_at = 毫秒
   以「一天」為單位，誰比較新就用誰的，不再整包覆蓋。
+  只有登入的 Google 帳號且符合資料庫 RLS 規則才讀寫得到。
 */
-const FIREBASE_CONFIG = { // 網頁用的公開設定，不是機密；資料安全靠 Firestore 規則與 Google 登入
-  apiKey: "AIzaSyA_Z9EBIaiFfatRv98MOK9AWXs4pgtWUNM",
-  authDomain: "alpha-f914f.firebaseapp.com",
-  projectId: "alpha-f914f",
-  storageBucket: "alpha-f914f.firebasestorage.app",
-  messagingSenderId: "474296722006",
-  appId: "1:474296722006:web:b5d470c6826227443591f7"
-};
-const FB_BASE = 'https://www.gstatic.com/firebasejs/11.10.0/';
+const SUPABASE_URL = 'https://achrezfjtyjjgoyaaowr.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_QoCg7l2nS1Bhjq_sdLqcbA_ekXJELvA'; // 公開的 publishable key，不是機密；資料安全靠 RLS 與 Google 登入
+const SB_ESM = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 // 舊的 Gist：只用來第一次登入時「唯讀匯入」歷史紀錄（不需要 token）
 const GIST_ID = '753eefa68ad8cb692c64908125e8c48d';
 const GIST_FILE = 'yentool-diet.json';
@@ -454,7 +449,7 @@ let _syncTimer = null;
 let TS = {};      // key -> 本機最後編輯時間
 let SYNCED = {};  // key -> 上次確認與雲端一致的 JSON 字串
 let LAST = {};    // key -> 本機上次看到的 JSON（用來偵測哪一天被改）
-let _fb = null;   // { auth, db, fns, user, unsub }
+let _fb = null;   // { client, user, channel }
 
 function todayStr(){
   const d = new Date();
@@ -479,14 +474,14 @@ function load(){
   if(!D.days) D.days = {};
   if(!D.targets) D.targets = {...DEFAULT_TARGETS};
   TS = readJSON('diet_ts');
-  SYNCED = readJSON('diet_synced');
+  SYNCED = readJSON('diet_synced_sb'); // 換成 Supabase 後用新 key，第一次登入會把本機完整紀錄上傳
   localStorage.removeItem('diet_token'); // 舊的 GitHub token 不再使用
   LAST = {};
   syncKeys().forEach(k => { LAST[k] = JSON.stringify(valueOf(k)); });
 }
 function persistMeta(){
   localStorage.setItem('diet_ts', JSON.stringify(TS));
-  localStorage.setItem('diet_synced', JSON.stringify(SYNCED));
+  localStorage.setItem('diet_synced_sb', JSON.stringify(SYNCED));
 }
 function touch(){
   const now = Date.now();
@@ -510,16 +505,14 @@ function scheduleSync(){
 
 async function pushDirty(){
   if(!_fb || !_fb.user) return;
-  const { db, fns } = _fb;
   const dirty = syncKeys().filter(k => JSON.stringify(valueOf(k)) !== SYNCED[k] && !skippable(k));
   if(!dirty.length) return;
   setSyncStatus('syncing');
   try {
-    await Promise.all(dirty.map(async k => {
-      const j = JSON.stringify(valueOf(k));
-      await fns.setDoc(fns.doc(db, 'diet', k), { data: j, updatedAt: TS[k] || 1 });
-      SYNCED[k] = j;
-    }));
+    const rows = dirty.map(k => ({ k, data: JSON.stringify(valueOf(k)), updated_at: TS[k] || 1 }));
+    const { error } = await _fb.client.from('diet').upsert(rows, { onConflict: 'k' });
+    if(error) throw error;
+    rows.forEach(r => { SYNCED[r.k] = r.data; });
     persistMeta();
     setSyncStatus('ok');
   } catch(e) {
@@ -527,12 +520,11 @@ async function pushDirty(){
   }
 }
 
-function applySnapshot(snap){
+function applyRows(rows, full){
   let changed = false;
-  snap.docs.forEach(d => {
-    if(d.metadata.hasPendingWrites) return; // 自己剛寫的，不用回灌
-    const k = d.id;
-    const { data, updatedAt } = d.data();
+  rows.forEach(r => {
+    const k = r.k;
+    const data = r.data, updatedAt = Number(r.updated_at) || 0;
     if(typeof data !== 'string') return;
     let v; try { v = JSON.parse(data); } catch(e){ return; }
     if(updatedAt > (TS[k] || 0)){
@@ -547,7 +539,7 @@ function applySnapshot(snap){
   if(changed) localStorage.setItem('diet_cache', JSON.stringify(D));
   persistMeta();
   if(changed) rerenderSoon();
-  if(snap.empty) importGistOnce();
+  if(full && !rows.length) importGistOnce();
   scheduleSync();
   setSyncStatus('ok');
 }
@@ -580,21 +572,29 @@ async function importGistOnce(){
   } catch(e) { /* 下次登入再試 */ }
 }
 
-async function initFirebase(){
+async function loadAll(){
+  const { data, error } = await _fb.client.from('diet').select('k,data,updated_at');
+  if(error){ setSyncStatus('err'); return; }
+  applyRows(data || [], true);
+}
+
+async function initSupabase(){
   try {
-    const [app, auth, fs] = await Promise.all([
-      import(FB_BASE + 'firebase-app.js'),
-      import(FB_BASE + 'firebase-auth.js'),
-      import(FB_BASE + 'firebase-firestore.js')
-    ]);
-    const a = app.initializeApp(FIREBASE_CONFIG);
-    _fb = { auth: auth.getAuth(a), db: fs.getFirestore(a), fns: { ...auth, ...fs }, user: null, unsub: null };
-    auth.onAuthStateChanged(_fb.auth, user => {
+    const { createClient } = await import(SB_ESM);
+    const client = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, detectSessionInUrl: true } });
+    _fb = { client, user: null, channel: null };
+    client.auth.onAuthStateChange((event, session) => {
+      const user = session ? session.user : null;
+      if(_fb.channel){ client.removeChannel(_fb.channel); _fb.channel = null; }
       _fb.user = user;
-      if(_fb.unsub){ _fb.unsub(); _fb.unsub = null; }
       if(user){
         setSyncStatus('syncing');
-        _fb.unsub = fs.onSnapshot(fs.collection(_fb.db, 'diet'), applySnapshot, () => setSyncStatus('err'));
+        hideTokenUI();
+        setTimeout(loadAll, 0); // 不在 auth callback 裡直接呼叫 supabase，避免死鎖
+        _fb.channel = client.channel('diet-sync')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'diet' },
+              payload => { if(payload.new && payload.new.k) applyRows([payload.new], false); })
+          .subscribe(st => { if(st === 'CHANNEL_ERROR') setSyncStatus('err'); });
       } else {
         setSyncStatus('off');
         showTokenUI();
@@ -606,13 +606,16 @@ async function initFirebase(){
   }
 }
 
-async function fbLogin(){
+async function sbLogin(){
   if(!_fb) return;
-  try { await _fb.fns.signInWithPopup(_fb.auth, new _fb.fns.GoogleAuthProvider()); hideTokenUI(); }
-  catch(e){ toast('登入失敗：' + (e.code || e.message)); }
+  const { error } = await _fb.client.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: location.origin + location.pathname }
+  });
+  if(error) toast('登入失敗：' + error.message);
 }
-async function fbLogout(){
-  if(_fb) await _fb.fns.signOut(_fb.auth);
+async function sbLogout(){
+  if(_fb) await _fb.client.auth.signOut();
 }
 
 function setSyncStatus(state){
@@ -629,7 +632,7 @@ function renderAccount(){
   if(!info) return;
   const user = _fb && _fb.user;
   if(!_fb) info.textContent = '雲端連線載入中，或目前離線…';
-  else if(user) info.textContent = '已登入：' + (user.email || user.displayName) + '。飲食紀錄是大家共用的，會自動同步。';
+  else if(user) info.textContent = '已登入：' + (user.email || (user.user_metadata && user.user_metadata.name)) + '。飲食紀錄是大家共用的，會自動同步。';
   else info.textContent = '登入後，可以和其他人共用並同步同一份飲食紀錄。';
   login.style.display = (_fb && !user) ? '' : 'none';
   logout.style.display = user ? '' : 'none';
@@ -827,7 +830,7 @@ function jumpToDate(ds){
 /* ── init ── */
 load();
 render();
-initFirebase();
+initSupabase();
 </script>
 </body>
 </html>
