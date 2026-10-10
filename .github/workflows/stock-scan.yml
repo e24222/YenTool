@@ -1,0 +1,37 @@
+name: Daily stock scan
+
+on:
+  schedule:
+    - cron: '30 10 * * 1-5'   # 週一至週五 18:30 台灣時間（法人資料皆已公布）
+  workflow_dispatch: {}        # 也可手動觸發
+
+permissions:
+  contents: write
+
+concurrency:
+  group: stock-scan
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Fetch data and analyze
+        run: python scripts/stock_scan.py
+      - name: Commit if changed
+        run: |
+          git config user.name "stock-scan-bot"
+          git config user.email "actions@github.com"
+          git add stock/data
+          if ! git diff --cached --quiet; then
+            git commit -m "自動更新台股資料 $(TZ=Asia/Taipei date +%F)"
+            git pull --rebase
+            git push
+          else
+            echo "no changes"
+          fi
