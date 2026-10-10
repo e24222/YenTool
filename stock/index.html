@@ -131,6 +131,7 @@ const RANGES = [
 const SIGS = ['多頭排列', '站上月線', '站上季線', '月線上揚', 'KD黃金交叉', 'MACD翻紅', '突破20日高', '接近60日高',
   '爆量', '突破布林上軌', 'RSI強勢', 'RSI超賣', '外資連買', '投信連買', '營收年增20%'];
 const PRESETS = {
+  '媽媽用': { r: { yld: [6, ''] }, s: [] },
   '綜合高分': { r: { v20: [500, ''], score: [70, ''] }, s: [] },
   '動能突破': { r: { v20: [1000, ''], vr: [1.5, ''], pct: [0, ''] }, s: ['突破20日高', '站上月線'] },
   '法人追蹤': { r: { v20: [500, ''], it5: [300, ''] }, s: ['投信連買', '站上月線'] },
@@ -148,10 +149,10 @@ const COLS = [
 let DATA, state, sortKey = 'score', sortDir = -1, shown = 50;
 const STORE = 'yentool-stock-criteria';
 
-function defaultState() { return { r: {}, s: [], m: ['TWSE', 'TPEx'], p: '綜合高分' }; }
+function defaultState() { return { r: {}, s: [], m: ['TWSE', 'TPEx'], p: '媽媽用' }; }
 function loadState() {
   try { const s = JSON.parse(localStorage.getItem(STORE)); if (s && s.r) return s; } catch (e) {}
-  const s = defaultState(); s.r = JSON.parse(JSON.stringify(PRESETS['綜合高分'].r)); return s;
+  const s = defaultState(); s.r = JSON.parse(JSON.stringify(PRESETS['媽媽用'].r)); return s;
 }
 function saveState() { try { localStorage.setItem(STORE, JSON.stringify(state)); } catch (e) {} }
 
