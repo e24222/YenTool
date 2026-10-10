@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>台股每日選股</title>
+<meta name="theme-color" content="#0f172a">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg1: #0f172a; --bg2: #312e81;
+  --card: rgba(255,255,255,0.07); --line: rgba(255,255,255,0.14);
+  --text: #f1f5f9; --dim: rgba(241,245,249,0.55);
+  --up: #f87171; --down: #4ade80; --accent: #a5b4fc;
+}
+html, body {
+  min-height: 100%;
+  font-family: "Microsoft JhengHei", "PingFang TC", sans-serif;
+  background: linear-gradient(135deg, var(--bg1), var(--bg2)) fixed;
+  color: var(--text);
+}
+.wrap { max-width: 1180px; margin: 0 auto; padding: 18px 16px 48px; }
+header { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 6px 16px; margin-bottom: 14px; }
+header a { color: var(--dim); text-decoration: none; font-size: .9rem; }
+header h1 { font-size: 1.6rem; font-weight: 800; }
+.asof { color: var(--dim); font-size: .85rem; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+.grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); margin-bottom: 14px; }
+.k { color: var(--dim); font-size: .8rem; margin-bottom: 4px; }
+.big { font-size: 1.5rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.sub { font-size: .9rem; font-variant-numeric: tabular-nums; margin-top: 2px; }
+.up { color: var(--up); } .down { color: var(--down); } .dim { color: var(--dim); }
+.bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; margin: 8px 0 4px; background: #64748b; }
+.bar i { display: block; height: 100%; }
+svg.spark { width: 100%; height: 38px; margin-top: 6px; display: block; }
+h2 { font-size: 1.05rem; margin: 0 0 10px; }
+.presets { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+button, .chip {
+  font: inherit; font-size: .85rem; color: var(--text);
+  background: rgba(255,255,255,0.09); border: 1px solid var(--line); border-radius: 999px;
+  padding: 6px 13px; cursor: pointer; transition: background .15s;
+}
+button:hover, .chip:hover { background: rgba(255,255,255,0.2); }
+button.on, .chip.on { background: var(--accent); color: #1e1b4b; border-color: var(--accent); font-weight: 700; }
+.ranges { display: grid; gap: 10px 14px; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); margin-bottom: 12px; }
+.rg label { display: block; color: var(--dim); font-size: .78rem; margin-bottom: 3px; }
+.rg div { display: flex; align-items: center; gap: 5px; }
+input[type=number] {
+  width: 100%; min-width: 0; font: inherit; font-size: .9rem; color: var(--text);
+  background: rgba(0,0,0,0.25); border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px;
+}
+input[type=number]::placeholder { color: rgba(255,255,255,.28); }
+.chips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 4px; }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 10px; }
+.count { font-size: .9rem; color: var(--dim); margin-left: auto; }
+.tbl-wrap { overflow-x: auto; margin-top: 14px; border-radius: 14px; border: 1px solid var(--line); }
+table { border-collapse: collapse; width: 100%; min-width: 980px; font-size: .88rem; font-variant-numeric: tabular-nums; }
+th, td { padding: 8px 10px; text-align: right; white-space: nowrap; border-bottom: 1px solid rgba(255,255,255,0.07); }
+th { position: sticky; top: 0; background: #1e1b4b; color: var(--dim); font-weight: 600; cursor: pointer; user-select: none; font-size: .78rem; }
+th.sorted { color: var(--accent); }
+th:first-child, td:first-child { text-align: left; }
+td.sigs { text-align: left; white-space: normal; min-width: 200px; }
+tr:hover td { background: rgba(255,255,255,0.05); }
+td a { color: var(--text); text-decoration: none; }
+td a:hover { text-decoration: underline; }
+.code { color: var(--dim); font-size: .78rem; margin-right: 6px; }
+.tag { display: inline-block; font-size: .7rem; padding: 1px 7px; margin: 1px 3px 1px 0; border-radius: 999px; background: rgba(165,180,252,.18); color: #c7d2fe; }
+.score { display: inline-block; min-width: 34px; text-align: center; padding: 1px 6px; border-radius: 6px; font-weight: 700; background: rgba(165,180,252,.2); }
+.more { display: block; margin: 14px auto 0; }
+.note { color: var(--dim); font-size: .75rem; margin-top: 22px; line-height: 1.6; }
+#msg { padding: 40px 0; text-align: center; color: var(--dim); }
+@media (max-width: 600px) { header h1 { font-size: 1.3rem; } .big { font-size: 1.3rem; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div><a href="../">← YenTool</a><h1>📈 台股每日選股</h1></div>
+    <div class="asof" id="asof">載入中…</div>
+  </header>
+
+  <div id="msg">載入資料中…</div>
+
+  <div id="app" hidden>
+    <div class="grid" id="overview"></div>
+
+    <div class="card">
+      <h2>🎯 選股條件</h2>
+      <div class="presets" id="presets"></div>
+      <div class="ranges" id="ranges"></div>
+      <div class="k">技術／籌碼訊號（全部勾選的都要符合）</div>
+      <div class="chips" id="sigchips"></div>
+      <div class="row">
+        <span class="k" style="margin:0">市場</span>
+        <span class="chip on" data-mkt="TWSE">上市</span>
+        <span class="chip on" data-mkt="TPEx">上櫃</span>
+        <button id="reset">清除條件</button>
+        <span class="count" id="count"></span>
+      </div>
+    </div>
+
+    <div class="tbl-wrap"><table>
+      <thead><tr id="thead"></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table></div>
+    <button class="more" id="more" hidden>顯示更多</button>
+
+    <p class="note">
+      資料來源：臺灣證券交易所、證券櫃檯買賣中心公開資料，每個交易日收盤後自動更新。僅含一般股票（4 碼代號），不含 ETF、權證。<br>
+      量比＝今日成交量 ÷ 前 5 日均量；法人買賣超單位為張；法人買賣超金額為以收盤價估算；KD 為 9,3,3，MACD 為 12,26,9，布林為 20 日 ±2σ。<br>
+      綜合分數是依趨勢、動能、量能、籌碼、基本面加總的簡易評分（滿分 100），僅供篩選參考，不構成投資建議。
+    </p>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const fmt = (v, d = 0) => v == null ? '–' : Number(v).toLocaleString('zh-TW', { minimumFractionDigits: d, maximumFractionDigits: d });
+const cls = v => v > 0 ? 'up' : v < 0 ? 'down' : 'dim';
+const sgn = (v, d = 2) => v == null ? '–' : (v > 0 ? '+' : '') + fmt(v, d);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// 範圍條件：[欄位, 標籤]
+const RANGES = [
+  ['c', '股價'], ['v20', '20日均量（張）'], ['vol', '今日成交量（張）'], ['vr', '量比'],
+  ['pct', '今日漲跌 %'], ['r5', '5日漲跌 %'], ['r20', '20日漲跌 %'], ['rsi', 'RSI(14)'],
+  ['k', 'K 值'], ['bb', '布林 %B'], ['fi', '外資今日買賣超（張）'], ['it', '投信今日買賣超（張）'],
+  ['fi5', '外資5日累計（張）'], ['it5', '投信5日累計（張）'], ['fs', '外資連買天數'], ['its', '投信連買天數'],
+  ['pe', '本益比'], ['yld', '殖利率 %'], ['pb', '股價淨值比'], ['ry', '月營收年增 %'], ['score', '綜合分數'],
+];
+const SIGS = ['多頭排列', '站上月線', '站上季線', '月線上揚', 'KD黃金交叉', 'MACD翻紅', '突破20日高', '接近60日高',
+  '爆量', '突破布林上軌', 'RSI強勢', 'RSI超賣', '外資連買', '投信連買', '營收年增20%'];
+const PRESETS = {
+  '綜合高分': { r: { v20: [500, ''], score: [70, ''] }, s: [] },
+  '動能突破': { r: { v20: [1000, ''], vr: [1.5, ''], pct: [0, ''] }, s: ['突破20日高', '站上月線'] },
+  '法人追蹤': { r: { v20: [500, ''], it5: [300, ''] }, s: ['投信連買', '站上月線'] },
+  '價值存股': { r: { v20: [500, ''], pe: [0.1, 15], yld: [4, ''] }, s: ['站上季線'] },
+  '超賣反彈': { r: { v20: [1000, ''], rsi: ['', 40] }, s: ['KD黃金交叉'] },
+  '營收成長': { r: { v20: [500, ''], ry: [20, ''] }, s: ['站上月線', '月線上揚'] },
+};
+const COLS = [
+  ['name', '股票', null], ['c', '收盤', v => fmt(v, 2)], ['pct', '漲跌%', null], ['vol', '量(張)', v => fmt(v)],
+  ['vr', '量比', v => fmt(v, 2)], ['rsi', 'RSI', v => fmt(v, 1)], ['k', 'K', v => fmt(v, 0)], ['d', 'D', v => fmt(v, 0)],
+  ['fi', '外資', null], ['it', '投信', null], ['fi5', '外資5日', null], ['pe', 'PE', v => fmt(v, 1)],
+  ['yld', '殖利率', v => fmt(v, 2)], ['ry', '營收YoY', null], ['score', '分數', null], ['sig', '訊號', null],
+];
+
+let DATA, state, sortKey = 'score', sortDir = -1, shown = 50;
+const STORE = 'yentool-stock-criteria';
+
+function defaultState() { return { r: {}, s: [], m: ['TWSE', 'TPEx'], p: '綜合高分' }; }
+function loadState() {
+  try { const s = JSON.parse(localStorage.getItem(STORE)); if (s && s.r) return s; } catch (e) {}
+  const s = defaultState(); s.r = JSON.parse(JSON.stringify(PRESETS['綜合高分'].r)); return s;
+}
+function saveState() { try { localStorage.setItem(STORE, JSON.stringify(state)); } catch (e) {} }
+
+function renderOverview() {
+  const d = DATA, ix = d.index || {}, b = d.breadth || {}, inst = d.inst;
+  const tot = (b.up || 0) + (b.down || 0) + (b.flat || 0) || 1;
+  const hist = d.index_hist || [];
+  let spark = '';
+  if (hist.length > 1) {
+    const cs = hist.map(h => h.c), mn = Math.min(...cs), mx = Math.max(...cs);
+    const pts = cs.map((c, i) => `${(i / (cs.length - 1) * 200).toFixed(1)},${(36 - (c - mn) / (mx - mn || 1) * 34).toFixed(1)}`).join(' ');
+    spark = `<svg class="spark" viewBox="0 0 200 38" preserveAspectRatio="none"><polyline points="${pts}" fill="none" stroke="${(ix.chg || 0) >= 0 ? '#f87171' : '#4ade80'}" stroke-width="1.6" vector-effect="non-scaling-stroke"/></svg>`;
+  }
+  const net = v => `<span class="${cls(v)}">${sgn(v, 1)}</span>`;
+  $('#overview').innerHTML = `
+    <div class="card"><div class="k">加權指數</div><div class="big ${cls(ix.chg)}">${fmt(ix.close, 2)}</div>
+      <div class="sub ${cls(ix.chg)}">${sgn(ix.chg)}（${sgn(ix.pct)}%）</div>${spark}</div>
+    <div class="card"><div class="k">上市＋上櫃成交金額</div><div class="big">${fmt(d.turnover)} 億</div>
+      <div class="sub dim">${d.count} 檔股票完成分析</div></div>
+    <div class="card"><div class="k">漲跌家數（上市）</div>
+      <div class="sub"><span class="up">▲ ${fmt(b.up)}</span>（漲停 ${fmt(b.limit_up)}）　<span class="down">▼ ${fmt(b.down)}</span>（跌停 ${fmt(b.limit_down)}）</div>
+      <div class="bar"><i style="width:${(b.up || 0) / tot * 100}%;background:#f87171"></i><i style="width:${(b.flat || 0) / tot * 100}%;background:#64748b"></i><i style="width:${(b.down || 0) / tot * 100}%;background:#4ade80"></i></div>
+      <div class="sub dim">持平 ${fmt(b.flat)}</div></div>
+    <div class="card"><div class="k">三大法人買賣超（億，約略）</div>
+      <div class="sub">外資 ${net(inst.fi)}</div><div class="sub">投信 ${net(inst.it)}</div><div class="sub">自營 ${net(inst.dl)}</div></div>`;
+}
+
+function renderControls() {
+  $('#presets').innerHTML = Object.keys(PRESETS).map(n => `<button data-p="${n}" class="${state.p === n ? 'on' : ''}">${n}</button>`).join('');
+  $('#ranges').innerHTML = RANGES.map(([f, l]) => {
+    const v = state.r[f] || ['', ''];
+    return `<div class="rg"><label>${l}</label><div><input type="number" step="any" data-f="${f}" data-i="0" placeholder="最小" value="${v[0]}"><span class="dim">~</span><input type="number" step="any" data-f="${f}" data-i="1" placeholder="最大" value="${v[1]}"></div></div>`;
+  }).join('');
+  $('#sigchips').innerHTML = SIGS.map(s => `<span class="chip ${state.s.includes(s) ? 'on' : ''}" data-s="${s}">${s}</span>`).join('');
+  document.querySelectorAll('[data-mkt]').forEach(el => el.classList.toggle('on', state.m.includes(el.dataset.mkt)));
+}
+
+function renderHead() {
+  $('#thead').innerHTML = COLS.map(([k, l]) =>
+    `<th data-k="${k}" class="${sortKey === k ? 'sorted' : ''}">${l}${sortKey === k ? (sortDir < 0 ? ' ▼' : ' ▲') : ''}</th>`).join('');
+}
+
+function filtered() {
+  const rs = Object.entries(state.r).filter(([, v]) => v[0] !== '' || v[1] !== '');
+  return DATA.stocks.filter(s => {
+    if (!state.m.includes(s.mkt)) return false;
+    for (const [f, [lo, hi]] of rs) {
+      const x = s[f];
+      if (x == null) return false;
+      if (lo !== '' && x < +lo) return false;
+      if (hi !== '' && x > +hi) return false;
+    }
+    return state.s.every(g => s.sig.includes(g));
+  });
+}
+
+function renderTable() {
+  const list = filtered();
+  list.sort((a, b) => {
+    let x = a[sortKey], y = b[sortKey];
+    if (sortKey === 'sig') { x = a.sig.length; y = b.sig.length; }
+    if (x == null) return 1; if (y == null) return -1;
+    return typeof x === 'string' ? x.localeCompare(y) * sortDir : (x - y) * sortDir;
+  });
+  $('#count').textContent = `符合 ${list.length} 檔`;
+  const net = v => `<td class="${cls(v)}">${v == null ? '–' : fmt(v)}</td>`;
+  $('#tbody').innerHTML = list.slice(0, shown).map(s => `<tr>
+    <td><span class="code">${s.code}</span><a href="https://tw.stock.yahoo.com/quote/${s.code}" target="_blank" rel="noopener">${esc(s.name)}</a></td>
+    <td class="${cls(s.pct)}">${fmt(s.c, 2)}</td><td class="${cls(s.pct)}">${sgn(s.pct)}</td>
+    <td>${fmt(s.vol)}</td><td>${fmt(s.vr, 2)}</td><td>${fmt(s.rsi, 1)}</td><td>${fmt(s.k, 0)}</td><td>${fmt(s.d, 0)}</td>
+    ${net(s.fi)}${net(s.it)}${net(s.fi5)}
+    <td>${fmt(s.pe, 1)}</td><td>${fmt(s.yld, 2)}</td><td class="${cls(s.ry)}">${s.ry == null ? '–' : sgn(s.ry, 1)}</td>
+    <td><span class="score">${s.score}</span></td>
+    <td class="sigs">${s.sig.map(g => `<span class="tag">${g}</span>`).join('')}</td></tr>`).join('');
+  $('#more').hidden = list.length <= shown;
+  $('#more').textContent = `顯示更多（還有 ${list.length - shown} 檔）`;
+  renderHead();
+}
+
+function refresh() { saveState(); renderTable(); }
+
+function bind() {
+  $('#presets').onclick = e => {
+    const n = e.target.dataset.p; if (!n) return;
+    state.r = JSON.parse(JSON.stringify(PRESETS[n].r)); state.s = [...PRESETS[n].s]; state.p = n;
+    shown = 50; renderControls(); refresh();
+  };
+  $('#ranges').oninput = e => {
+    const f = e.target.dataset.f; if (!f) return;
+    const cur = state.r[f] || ['', '']; cur[+e.target.dataset.i] = e.target.value; state.r[f] = cur;
+    state.p = ''; shown = 50; document.querySelectorAll('#presets button').forEach(b => b.classList.remove('on')); refresh();
+  };
+  $('#sigchips').onclick = e => {
+    const g = e.target.dataset.s; if (!g) return;
+    state.s = state.s.includes(g) ? state.s.filter(x => x !== g) : [...state.s, g];
+    state.p = ''; shown = 50; renderControls(); refresh();
+  };
+  document.querySelectorAll('[data-mkt]').forEach(el => el.onclick = () => {
+    const m = el.dataset.mkt;
+    state.m = state.m.includes(m) ? state.m.filter(x => x !== m) : [...state.m, m];
+    el.classList.toggle('on'); shown = 50; refresh();
+  });
+  $('#reset').onclick = () => { state = defaultState(); state.p = ''; shown = 50; renderControls(); refresh(); };
+  $('#thead').onclick = e => {
+    const k = e.target.dataset.k; if (!k) return;
+    if (sortKey === k) sortDir *= -1; else { sortKey = k; sortDir = k === 'name' ? 1 : -1; }
+    renderTable();
+  };
+  $('#more').onclick = () => { shown += 100; renderTable(); };
+}
+
+fetch('data/latest.json?_=' + Date.now()).then(r => { if (!r.ok) throw 0; return r.json(); }).then(d => {
+  DATA = d; state = loadState();
+  $('#asof').textContent = `資料日期 ${d.date}　更新於 ${d.generated.replace('T', ' ').slice(0, 16)}`;
+  $('#msg').hidden = true; $('#app').hidden = false;
+  renderOverview(); renderControls(); renderHead(); bind(); renderTable();
+}).catch(() => { $('#msg').textContent = '尚無資料。請先執行 scripts/stock_scan.py，或等待排程更新。'; });
+</script>
+</body>
+</html>
