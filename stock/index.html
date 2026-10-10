@@ -69,37 +69,43 @@ td a:hover { text-decoration: underline; }
 .more { display: block; margin: 14px auto 0; }
 .note { color: var(--dim); font-size: .75rem; margin-top: 22px; line-height: 1.6; }
 #msg { padding: 40px 0; text-align: center; color: var(--dim); }
-@media (max-width: 700px) {
-  html { font-size: 18px; }
-  header h1 { font-size: 1.5rem; }
-  .big { font-size: 1.6rem; }
-  .k, .rg label { font-size: .95rem; }
-  .sub, .asof, .count { font-size: 1rem; }
-  button, .chip { font-size: 1rem; padding: 9px 16px; }
-  input[type=number], select { font-size: 1rem; padding: 9px 10px; }
-  .ranges { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
-  .note { font-size: .9rem; }
-  .tbl-wrap { display: none; }
-  #cards, #sortbar { display: block; }
-}
+/* 手機卡片（桌面隱藏） */
 #cards, #sortbar { display: none; }
 details { margin-bottom: 12px; }
 summary { cursor: pointer; font-size: .95rem; padding: 8px 0; color: var(--accent); font-weight: 700; }
 summary span { color: var(--dim); font-weight: 400; margin-left: 8px; }
-#sortbar { margin-top: 14px; }
+#sortbar { margin-top: 16px; }
 select { font: inherit; color: var(--text); background: rgba(0,0,0,0.35); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; }
-.sc { margin-top: 12px; padding: 14px 16px; }
+.sc { margin-top: 14px; padding: 16px 18px; }
 .sc .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
-.sc .nm { font-size: 1.25rem; font-weight: 800; color: var(--text); text-decoration: none; }
-.sc .cd { color: var(--dim); font-size: .9rem; margin-top: 2px; }
-.sc .px { text-align: right; font-size: 1.4rem; font-weight: 800; }
-.sc .px small { display: block; font-size: 1rem; font-weight: 600; }
-.sc .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 8px; margin-top: 12px; }
-.sc .stats div { font-size: 1.05rem; font-weight: 700; }
-.sc .stats span { display: block; color: var(--dim); font-size: .8rem; font-weight: 400; }
-.sc .tags { margin-top: 10px; }
-.sc .tag { font-size: .85rem; padding: 2px 9px; }
-.sc .score { font-size: 1rem; }
+.sc .nm { font-size: 1.4rem; font-weight: 800; color: var(--text); text-decoration: none; }
+.sc .cd { color: var(--dim); font-size: 1rem; margin-top: 4px; }
+.sc .px { text-align: right; font-size: 1.6rem; font-weight: 800; line-height: 1.2; }
+.sc .px small { display: block; font-size: 1.1rem; font-weight: 700; }
+.sc .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; margin-top: 14px; }
+.sc .stats div { font-size: 1.25rem; font-weight: 700; }
+.sc .stats div > span:first-child { display: block; color: var(--dim); font-size: .95rem; font-weight: 400; margin-bottom: 2px; }
+.sc .tags { margin-top: 12px; }
+.sc .tag { font-size: 1rem; padding: 3px 11px; margin: 3px 4px 3px 0; }
+.sc .score { font-size: 1.05rem; }
+
+@media (max-width: 820px) {
+  html { font-size: 19px; }
+  .wrap { padding: 14px 14px 48px; }
+  header h1 { font-size: 1.6rem; }
+  header a { font-size: 1.05rem; }
+  .asof { font-size: 1rem; }
+  .big { font-size: 1.8rem; }
+  .k, .rg label { font-size: 1.05rem; }
+  .sub, .count { font-size: 1.1rem; }
+  h2 { font-size: 1.3rem; }
+  summary { font-size: 1.1rem; }
+  button, .chip { font-size: 1.1rem; padding: 10px 18px; }
+  input[type=number], select { font-size: 1.1rem; padding: 10px 12px; }
+  .ranges { grid-template-columns: 1fr 1fr; }
+  .note { font-size: 1rem; }
+  .tbl-wrap { display: none; }
+  #cards, #sortbar { display: block; }
 }
 </style>
 </head>
@@ -320,7 +326,7 @@ fetch('data/latest.json?_=' + Date.now()).then(r => { if (!r.ok) throw 0; return
   DATA = d; state = loadState();
   $('#asof').textContent = `資料日期 ${d.date}　更新於 ${d.generated.replace('T', ' ').slice(0, 16)}`;
   $('#msg').hidden = true; $('#app').hidden = false;
-  if (innerWidth <= 700) $('#rdet').open = false;
+  if (innerWidth <= 820) $('#rdet').open = false;
   renderOverview(); renderControls(); renderHead(); bind(); refresh();
 }).catch(() => { $('#msg').textContent = '尚無資料。請先執行 scripts/stock_scan.py，或等待排程更新。'; });
 </script>
