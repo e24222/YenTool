@@ -89,23 +89,49 @@ select { font: inherit; color: var(--text); background: rgba(0,0,0,0.35); border
 .sc .tag { font-size: 1rem; padding: 3px 11px; margin: 3px 4px 3px 0; }
 .sc .score { font-size: 1.05rem; }
 
-@media (max-width: 820px) {
+@media (max-width: 820px), (pointer: coarse) {
   html { font-size: 19px; }
-  .wrap { padding: 14px 14px 48px; }
-  header h1 { font-size: 1.6rem; }
-  header a { font-size: 1.05rem; }
-  .asof { font-size: 1rem; }
-  .big { font-size: 1.8rem; }
-  .k, .rg label { font-size: 1.05rem; }
-  .sub, .count { font-size: 1.1rem; }
-  h2 { font-size: 1.3rem; }
-  summary { font-size: 1.1rem; }
-  button, .chip { font-size: 1.1rem; padding: 10px 18px; }
-  input[type=number], select { font-size: 1.1rem; padding: 10px 12px; }
-  .ranges { grid-template-columns: 1fr 1fr; }
-  .note { font-size: 1rem; }
+  .wrap { padding: .4rem .35rem 2.5rem; }
+  header h1 { font-size: 1.5rem; }
+  header a { font-size: 1rem; }
+  .asof { font-size: .9rem; }
+  .grid { grid-template-columns: 1fr; }
+  .card { padding: .5rem .55rem; border-radius: .5rem; }
+  .big { font-size: 1.7rem; }
+  .k, .rg label { font-size: 1rem; }
+  .sub, .count { font-size: 1rem; }
+  h2 { font-size: 1.25rem; }
+  summary { font-size: 1.05rem; }
+  button, .chip { font-size: .85rem; padding: .4em .75em; }
+  .presets, .chips { gap: .3rem; }
+  .presets { display: grid; grid-template-columns: 1fr 1fr; }
+  .presets button { font-size: .8rem; padding: .35em .2em; }
+  input[type=number], select { font-size: 1.05rem; padding: .4em .5em; border-radius: .4rem; }
+  .ranges { grid-template-columns: 1fr; }
+  .note { font-size: .9rem; }
+  .bar { height: .5rem; }
+  svg.spark { height: 2.4rem; }
   .tbl-wrap { display: none; }
   #cards, #sortbar { display: block; }
+  /* 卡片：一行一項，放大後也排得下 */
+  .sc { margin-top: .5rem; padding: .5rem .6rem; }
+  .sc .top { flex-direction: column; gap: .2rem; }
+  .sc .nm { font-size: 1.5rem; }
+  .sc .cd { font-size: 1rem; }
+  .sc .px { text-align: left; font-size: 1.4rem; display: flex; flex-wrap: wrap; align-items: baseline; column-gap: .4em; }
+  .sc .px small { display: inline; font-size: 1rem; }
+  .sc .stats { grid-template-columns: 1fr; gap: .35rem; margin-top: .6rem; }
+  .sc .stats div { display: flex; justify-content: space-between; align-items: baseline; gap: .3em; font-size: 1.1rem; border-bottom: 1px solid rgba(255,255,255,.08); padding-bottom: .3rem; }
+  .sc .stats div > span:first-child { display: inline; font-size: .85rem; margin: 0; white-space: nowrap; }
+  .sc .tag { font-size: .95rem; padding: .15em .6em; }
+  .sc .score { font-size: 1rem; padding: .05em .4em; }
+}
+/* 觸控裝置：字級跟著螢幕寬度走（一般手機約為原本兩倍），也涵蓋瀏覽器開成「電腦版網站」的情況 */
+@media (pointer: coarse) {
+  html { font-size: 9.6vw; }
+}
+@media (pointer: coarse) and (min-width: 600px) {
+  html { font-size: max(19px, 4.6vw); }
 }
 </style>
 </head>
@@ -125,8 +151,7 @@ select { font: inherit; color: var(--text); background: rgba(0,0,0,0.35); border
       <h2>🎯 選股條件</h2>
       <div class="presets" id="presets"></div>
       <details id="rdet" open><summary>數值條件（點開調整）<span id="rsum"></span></summary><div class="ranges" id="ranges"></div></details>
-      <div class="k">技術／籌碼訊號（全部勾選的都要符合）</div>
-      <div class="chips" id="sigchips"></div>
+      <details id="sdet" open><summary>技術／籌碼訊號（全部勾選的都要符合）<span id="ssum"></span></summary><div class="chips" id="sigchips"></div></details>
       <div class="row">
         <span class="k" style="margin:0">市場</span>
         <span class="chip on" data-mkt="TWSE">上市</span>
@@ -287,7 +312,7 @@ function ruleText() {
   return Object.entries(state.r).filter(([, v]) => v[0] !== '' || v[1] !== '')
     .map(([f, v]) => names[f] + (v[0] !== '' && v[1] !== '' ? ` ${v[0]}~${v[1]}` : v[0] !== '' ? ` ≥ ${v[0]}` : ` ≤ ${v[1]}`)).join('、');
 }
-function refresh() { saveState(); $('#rsum').textContent = ruleText() ? '：' + ruleText() : ''; renderTable(); }
+function refresh() { saveState(); $('#rsum').textContent = ruleText() ? '：' + ruleText() : ''; $('#ssum').textContent = state.s.length ? '：' + state.s.join('、') : ''; renderTable(); }
 
 function bind() {
   $('#sortsel').innerHTML = COLS.filter(c => c[0] !== 'sig').map(([k, l]) => `<option value="${k}">${l}</option>`).join('');
@@ -326,7 +351,7 @@ fetch('data/latest.json?_=' + Date.now()).then(r => { if (!r.ok) throw 0; return
   DATA = d; state = loadState();
   $('#asof').textContent = `資料日期 ${d.date}　更新於 ${d.generated.replace('T', ' ').slice(0, 16)}`;
   $('#msg').hidden = true; $('#app').hidden = false;
-  if (innerWidth <= 820) $('#rdet').open = false;
+  if (innerWidth <= 820 || matchMedia('(pointer: coarse)').matches) { $('#rdet').open = false; $('#sdet').open = false; }
   renderOverview(); renderControls(); renderHead(); bind(); refresh();
 }).catch(() => { $('#msg').textContent = '尚無資料。請先執行 scripts/stock_scan.py，或等待排程更新。'; });
 </script>
