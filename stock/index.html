@@ -69,7 +69,38 @@ td a:hover { text-decoration: underline; }
 .more { display: block; margin: 14px auto 0; }
 .note { color: var(--dim); font-size: .75rem; margin-top: 22px; line-height: 1.6; }
 #msg { padding: 40px 0; text-align: center; color: var(--dim); }
-@media (max-width: 600px) { header h1 { font-size: 1.3rem; } .big { font-size: 1.3rem; } }
+@media (max-width: 700px) {
+  html { font-size: 18px; }
+  header h1 { font-size: 1.5rem; }
+  .big { font-size: 1.6rem; }
+  .k, .rg label { font-size: .95rem; }
+  .sub, .asof, .count { font-size: 1rem; }
+  button, .chip { font-size: 1rem; padding: 9px 16px; }
+  input[type=number], select { font-size: 1rem; padding: 9px 10px; }
+  .ranges { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+  .note { font-size: .9rem; }
+  .tbl-wrap { display: none; }
+  #cards, #sortbar { display: block; }
+}
+#cards, #sortbar { display: none; }
+details { margin-bottom: 12px; }
+summary { cursor: pointer; font-size: .95rem; padding: 8px 0; color: var(--accent); font-weight: 700; }
+summary span { color: var(--dim); font-weight: 400; margin-left: 8px; }
+#sortbar { margin-top: 14px; }
+select { font: inherit; color: var(--text); background: rgba(0,0,0,0.35); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; }
+.sc { margin-top: 12px; padding: 14px 16px; }
+.sc .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.sc .nm { font-size: 1.25rem; font-weight: 800; color: var(--text); text-decoration: none; }
+.sc .cd { color: var(--dim); font-size: .9rem; margin-top: 2px; }
+.sc .px { text-align: right; font-size: 1.4rem; font-weight: 800; }
+.sc .px small { display: block; font-size: 1rem; font-weight: 600; }
+.sc .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 8px; margin-top: 12px; }
+.sc .stats div { font-size: 1.05rem; font-weight: 700; }
+.sc .stats span { display: block; color: var(--dim); font-size: .8rem; font-weight: 400; }
+.sc .tags { margin-top: 10px; }
+.sc .tag { font-size: .85rem; padding: 2px 9px; }
+.sc .score { font-size: 1rem; }
+}
 </style>
 </head>
 <body>
@@ -87,7 +118,7 @@ td a:hover { text-decoration: underline; }
     <div class="card">
       <h2>🎯 選股條件</h2>
       <div class="presets" id="presets"></div>
-      <div class="ranges" id="ranges"></div>
+      <details id="rdet" open><summary>數值條件（點開調整）<span id="rsum"></span></summary><div class="ranges" id="ranges"></div></details>
       <div class="k">技術／籌碼訊號（全部勾選的都要符合）</div>
       <div class="chips" id="sigchips"></div>
       <div class="row">
@@ -99,6 +130,8 @@ td a:hover { text-decoration: underline; }
       </div>
     </div>
 
+    <div id="sortbar"><span class="k">排序：</span><select id="sortsel"></select> <button id="sortdir"></button></div>
+    <div id="cards"></div>
     <div class="tbl-wrap"><table>
       <thead><tr id="thead"></tr></thead>
       <tbody id="tbody"></tbody>
@@ -131,7 +164,7 @@ const RANGES = [
 const SIGS = ['多頭排列', '站上月線', '站上季線', '月線上揚', 'KD黃金交叉', 'MACD翻紅', '突破20日高', '接近60日高',
   '爆量', '突破布林上軌', 'RSI強勢', 'RSI超賣', '外資連買', '投信連買', '營收年增20%'];
 const PRESETS = {
-  '媽媽用': { r: { yld: [6, ''] }, s: [] },
+  '媽媽用': { r: { yld: [6, ''], c: ['', 50] }, s: [] },
   '綜合高分': { r: { v20: [500, ''], score: [70, ''] }, s: [] },
   '動能突破': { r: { v20: [1000, ''], vr: [1.5, ''], pct: [0, ''] }, s: ['突破20日高', '站上月線'] },
   '法人追蹤': { r: { v20: [500, ''], it5: [300, ''] }, s: ['投信連買', '站上月線'] },
@@ -227,14 +260,33 @@ function renderTable() {
     <td>${fmt(s.pe, 1)}</td><td>${fmt(s.yld, 2)}</td><td class="${cls(s.ry)}">${s.ry == null ? '–' : sgn(s.ry, 1)}</td>
     <td><span class="score">${s.score}</span></td>
     <td class="sigs">${s.sig.map(g => `<span class="tag">${g}</span>`).join('')}</td></tr>`).join('');
+  const nt = v => `<span class="${cls(v)}">${v == null ? '–' : sgn(v, 0)}</span>`;
+  $('#cards').innerHTML = list.slice(0, shown).map(s => `<div class="card sc">
+    <div class="top"><div><a class="nm" href="https://tw.stock.yahoo.com/quote/${s.code}" target="_blank" rel="noopener">${esc(s.name)}</a><div class="cd">${s.code}　${s.mkt === 'TWSE' ? '上市' : '上櫃'}　<span class="score">${s.score}</span></div></div>
+      <div class="px ${cls(s.pct)}">${fmt(s.c, 2)}<small>${sgn(s.pct)}%</small></div></div>
+    <div class="stats">
+      <div><span>殖利率</span>${s.yld == null ? '–' : fmt(s.yld, 2) + '%'}</div><div><span>本益比</span>${fmt(s.pe, 1)}</div><div><span>營收年增</span>${s.ry == null ? '–' : sgn(s.ry, 1) + '%'}</div>
+      <div><span>成交量(張)</span>${fmt(s.vol)}</div><div><span>量比</span>${fmt(s.vr, 2)}</div><div><span>RSI</span>${fmt(s.rsi, 0)}</div>
+      <div><span>外資(張)</span>${nt(s.fi)}</div><div><span>投信(張)</span>${nt(s.it)}</div><div><span>KD</span>${fmt(s.k, 0)}/${fmt(s.d, 0)}</div></div>
+    <div class="tags">${s.sig.map(g => `<span class="tag">${g}</span>`).join('')}</div></div>`).join('');
+  $('#sortdir').textContent = sortDir < 0 ? '大→小 ▼' : '小→大 ▲';
+  $('#sortsel').value = sortKey;
   $('#more').hidden = list.length <= shown;
   $('#more').textContent = `顯示更多（還有 ${list.length - shown} 檔）`;
   renderHead();
 }
 
-function refresh() { saveState(); renderTable(); }
+function ruleText() {
+  const names = Object.fromEntries(RANGES);
+  return Object.entries(state.r).filter(([, v]) => v[0] !== '' || v[1] !== '')
+    .map(([f, v]) => names[f] + (v[0] !== '' && v[1] !== '' ? ` ${v[0]}~${v[1]}` : v[0] !== '' ? ` ≥ ${v[0]}` : ` ≤ ${v[1]}`)).join('、');
+}
+function refresh() { saveState(); $('#rsum').textContent = ruleText() ? '：' + ruleText() : ''; renderTable(); }
 
 function bind() {
+  $('#sortsel').innerHTML = COLS.filter(c => c[0] !== 'sig').map(([k, l]) => `<option value="${k}">${l}</option>`).join('');
+  $('#sortsel').onchange = e => { sortKey = e.target.value; sortDir = sortKey === 'name' ? 1 : -1; renderTable(); };
+  $('#sortdir').onclick = () => { sortDir *= -1; renderTable(); };
   $('#presets').onclick = e => {
     const n = e.target.dataset.p; if (!n) return;
     state.r = JSON.parse(JSON.stringify(PRESETS[n].r)); state.s = [...PRESETS[n].s]; state.p = n;
@@ -268,7 +320,8 @@ fetch('data/latest.json?_=' + Date.now()).then(r => { if (!r.ok) throw 0; return
   DATA = d; state = loadState();
   $('#asof').textContent = `資料日期 ${d.date}　更新於 ${d.generated.replace('T', ' ').slice(0, 16)}`;
   $('#msg').hidden = true; $('#app').hidden = false;
-  renderOverview(); renderControls(); renderHead(); bind(); renderTable();
+  if (innerWidth <= 700) $('#rdet').open = false;
+  renderOverview(); renderControls(); renderHead(); bind(); refresh();
 }).catch(() => { $('#msg').textContent = '尚無資料。請先執行 scripts/stock_scan.py，或等待排程更新。'; });
 </script>
 </body>
