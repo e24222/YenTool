@@ -503,14 +503,17 @@ async function pushDirty(){
   }
 }
 
-/* ── 每日自動備份 ──
-  每天第一次開頁面時，把「雲端目前的內容」複製到 workout_backup/{YYYY-MM-DD}，只留最近 30 天。
+/* ── 每日自動備份（只留一份：上一個版本）──
+  每天第一次開頁面時，把「雲端目前的內容」存成 workout/_backup_prev（整份覆蓋），
+  所以備份永遠是「今天第一次開之前」的狀態，例如 10/18 第一次開，備份的就是 10/17 的資料。
   備份的是收到的雲端資料（不是本機資料），所以久沒開的裝置不會把舊資料備份進去。
-  誤蓋掉時：到 Firestore 的 workout_backup 找前一天的文件，把 docs 裡對應動作的 data 還原即可。
+  防呆：如果雲端某個動作的歷史筆數比備份還少（疑似被蓋掉），不更新備份，保留好的那份。
+  還原：讀 workout/_backup_prev 的 data（JSON），把 docs 裡對應動作的 data 寫回 workout/{動作id}。
 */
 let _backupTried = false;
-const BACKUP_KEEP = 30;
+const BACKUP_ID = '_backup_prev';
 function taipeiDay(){ return new Date(Date.now() + 8*3600*1000).toISOString().slice(0,10); }
+function histLen(dataStr){ try { return (JSON.parse(dataStr).history || []).length; } catch(e){ return 0; } }
 async function dailyBackup(snap){
   try {
     if(!_fb || !_fb.user) return;
@@ -519,21 +522,28 @@ async function dailyBackup(snap){
     const { db, fns } = _fb;
     const docs = {};
     snap.docs.forEach(d => {
-      if(d.metadata.hasPendingWrites) return; // 本機剛寫、還沒確認的，不算雲端原本的內容
+      const id = decodeURIComponent(d.id);
+      if(id.charAt(0) === '_' || d.metadata.hasPendingWrites) return; // 備份檔本身／本機剛寫、還沒確認的不算
       const v = d.data();
-      if(typeof v.data === 'string') docs[decodeURIComponent(d.id)] = { data: v.data, updatedAt: v.updatedAt || 0 };
+      if(typeof v.data === 'string') docs[id] = { data: v.data, updatedAt: v.updatedAt || 0 };
     });
     if(!Object.keys(docs).length) return;
-    const ref = fns.doc(db, 'workout_backup', day);
-    const exists = (await fns.getDoc(ref)).exists();
-    if(!exists) await fns.setDoc(ref, { day, createdAt: Date.now(), by: _fb.user.email || '', docs });
-    localStorage.setItem('wo_backup_day', day);
-    // 只留最近 BACKUP_KEEP 天
-    const all = await fns.getDocs(fns.collection(db, 'workout_backup'));
-    const ids = all.docs.map(d => d.id).sort();
-    for(const id of ids.slice(0, Math.max(0, ids.length - BACKUP_KEEP))){
-      await fns.deleteDoc(fns.doc(db, 'workout_backup', id));
+    const ref = fns.doc(db, 'workout', BACKUP_ID);
+    const prevSnap = await fns.getDoc(ref);
+    let prev = null;
+    if(prevSnap.exists()){ try { prev = JSON.parse(prevSnap.data().data); } catch(e){ prev = null; } }
+    if(prev && prev.day === day){ localStorage.setItem('wo_backup_day', day); return; } // 今天別台裝置已備份
+    if(prev && prev.docs){
+      const bad = Object.keys(prev.docs).filter(id => !docs[id] || histLen(docs[id].data) < histLen(prev.docs[id].data));
+      if(bad.length){
+        console.warn('雲端資料疑似被蓋掉，未更新備份：', bad);
+        localStorage.setItem('wo_backup_day', day);
+        if(typeof toast === 'function') toast('⚠️ 偵測到歷史紀錄變少（' + bad.join(', ') + '），已保留舊備份');
+        return;
+      }
     }
+    await fns.setDoc(ref, { data: JSON.stringify({ day, createdAt: Date.now(), by: _fb.user.email || '', docs }), updatedAt: 1 });
+    localStorage.setItem('wo_backup_day', day);
   } catch(e) { console.warn('每日備份失敗', e); }
 }
 
@@ -544,6 +554,7 @@ function applySnapshot(snap){
   let changed = false;
   snap.docs.forEach(d => {
     const id = decodeURIComponent(d.id);
+    if(id.charAt(0) === '_') return; // 備份檔等內部文件，不當成動作
     remoteIds.add(id);
     if(d.metadata.hasPendingWrites) return; // 自己剛寫的，不用回灌
     const { data, updatedAt } = d.data();
