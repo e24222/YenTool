@@ -503,7 +503,43 @@ async function pushDirty(){
   }
 }
 
+/* ── 每日自動備份 ──
+  每天第一次開頁面時，把「雲端目前的內容」複製到 workout_backup/{YYYY-MM-DD}，只留最近 30 天。
+  備份的是收到的雲端資料（不是本機資料），所以久沒開的裝置不會把舊資料備份進去。
+  誤蓋掉時：到 Firestore 的 workout_backup 找前一天的文件，把 docs 裡對應動作的 data 還原即可。
+*/
+let _backupTried = false;
+const BACKUP_KEEP = 30;
+function taipeiDay(){ return new Date(Date.now() + 8*3600*1000).toISOString().slice(0,10); }
+async function dailyBackup(snap){
+  try {
+    if(!_fb || !_fb.user) return;
+    const day = taipeiDay();
+    if(localStorage.getItem('wo_backup_day') === day) return;
+    const { db, fns } = _fb;
+    const docs = {};
+    snap.docs.forEach(d => {
+      if(d.metadata.hasPendingWrites) return; // 本機剛寫、還沒確認的，不算雲端原本的內容
+      const v = d.data();
+      if(typeof v.data === 'string') docs[decodeURIComponent(d.id)] = { data: v.data, updatedAt: v.updatedAt || 0 };
+    });
+    if(!Object.keys(docs).length) return;
+    const ref = fns.doc(db, 'workout_backup', day);
+    const exists = (await fns.getDoc(ref)).exists();
+    if(!exists) await fns.setDoc(ref, { day, createdAt: Date.now(), by: _fb.user.email || '', docs });
+    localStorage.setItem('wo_backup_day', day);
+    // 只留最近 BACKUP_KEEP 天
+    const all = await fns.getDocs(fns.collection(db, 'workout_backup'));
+    const ids = all.docs.map(d => d.id).sort();
+    for(const id of ids.slice(0, Math.max(0, ids.length - BACKUP_KEEP))){
+      await fns.deleteDoc(fns.doc(db, 'workout_backup', id));
+    }
+  } catch(e) { console.warn('每日備份失敗', e); }
+}
+
 function applySnapshot(snap){
+  // 第一份來自伺服器的快照：先備份（在套用任何本機資料之前）
+  if(!_backupTried && !snap.metadata.fromCache){ _backupTried = true; dailyBackup(snap); }
   const remoteIds = new Set();
   let changed = false;
   snap.docs.forEach(d => {
