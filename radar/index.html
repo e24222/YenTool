@@ -56,6 +56,9 @@ button{cursor:pointer;border:none;border-radius:10px;font-family:inherit}
 .seclabel .dot{width:9px;height:9px;border-radius:2px;transform:rotate(45deg)}
 .seclabel .t{font-size:13.5px;font-weight:800;letter-spacing:.06em}
 .seclabel .n{font-size:11px;color:var(--sub);margin-left:auto}
+.seclabel[data-k]{cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent}
+.seclabel[data-k]:hover .n,.seclabel[data-k]:focus-visible .n{color:var(--ink)}
+.seclabel[data-k]:focus-visible{outline:1px solid var(--line);outline-offset:4px;border-radius:6px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:13px 14px;margin-bottom:9px;display:flex;gap:12px;align-items:center}
 .rankd{flex-shrink:0;width:66px;text-align:center}
 .rankd .km{font-size:17px;font-weight:900;font-variant-numeric:tabular-nums}
@@ -117,15 +120,15 @@ button{cursor:pointer;border:none;border-radius:10px;font-family:inherit}
     <div class="combo-head">⚡ 一次搞定路線</div>
     <div class="combo-body" id="combobody"></div>
   </div>
-  <div class="seclabel"><span class="dot" style="background:var(--wg)"></span><span class="t">最近的 World Gym</span><span class="n" id="wgn"></span></div>
+  <div class="seclabel" data-k="wg" role="button" tabindex="0" title="點擊展開／收合"><span class="dot" style="background:var(--wg)"></span><span class="t">最近的 World Gym</span><span class="n" id="wgn"></span></div>
   <div id="wglist"></div>
-  <div class="seclabel"><span class="dot" style="background:var(--chu)"></span><span class="t">最近的 CHUNITHM 機廳</span><span class="n" id="arcn"></span></div>
+  <div class="seclabel" data-k="arc" role="button" tabindex="0" title="點擊展開／收合"><span class="dot" style="background:var(--chu)"></span><span class="t">最近的 CHUNITHM 機廳</span><span class="n" id="arcn"></span></div>
   <div id="arclist"></div>
-  <div class="seclabel"><span class="dot" style="background:var(--mai)"></span><span class="t">最近的 maimai 機廳</span><span class="n" id="main2"></span></div>
+  <div class="seclabel" data-k="mai" role="button" tabindex="0" title="點擊展開／收合"><span class="dot" style="background:var(--mai)"></span><span class="t">最近的 maimai 機廳</span><span class="n" id="main2"></span></div>
   <div id="mailist"></div>
-  <div class="seclabel"><span class="dot" style="background:var(--sd)"></span><span class="t">最近的 SDVX Valkyrie 機廳</span><span class="n" id="sdn"></span></div>
+  <div class="seclabel" data-k="sd" role="button" tabindex="0" title="點擊展開／收合"><span class="dot" style="background:var(--sd)"></span><span class="t">最近的 SDVX Valkyrie 機廳</span><span class="n" id="sdn"></span></div>
   <div id="sdlist"></div>
-  <div class="seclabel"><span class="dot" style="background:var(--gi)"></span><span class="t">最近的 GITADORA DrumMania 機廳</span><span class="n" id="gin"></span></div>
+  <div class="seclabel" data-k="gi" role="button" tabindex="0" title="點擊展開／收合"><span class="dot" style="background:var(--gi)"></span><span class="t">最近的 GITADORA DrumMania 機廳</span><span class="n" id="gin"></span></div>
   <div id="gilist"></div>
 </div>
 
@@ -153,6 +156,28 @@ function fmtN(km){return km<1?[Math.round(km*1000),'公尺']:[km.toFixed(2),'公
 function gmap(la,lo){return 'https://maps.google.com/maps?q='+la+','+lo;}
 function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;');}
 
+const EXP={},SEC={};
+const NID={wg:'wgn',arc:'arcn',mai:'main2',sd:'sdn',gi:'gin'},LID={wg:'wglist',arc:'arclist',mai:'mailist',sd:'sdlist',gi:'gilist'};
+const TOPN=3,MAXN=20;
+function cardH(x,color,name,badge,showOpen){
+  const [num,unit]=fmtN(x.d);
+  return `<div class="card">
+    <div class="rankd"><div class="km" style="color:${color}">${num}</div><div class="u">${unit}</div></div>
+    <div class="info"><div class="nm">${esc(name)}${badge}</div><div class="ad">${esc(x.a)}${showOpen&&x.open&&x.open!=='未知'?' ・ '+esc(x.open):''}</div></div>
+    <a class="navbtn" target="_blank" rel="noopener" href="${gmap(x.la,x.lo)}">導航</a></div>`;
+}
+function draw(k){
+  const s=SEC[k];if(!s)return;
+  const open=!!EXP[k];
+  $(LID[k]).innerHTML=s.arr.slice(0,open?MAXN:TOPN).map(s.f).join('');
+  $(NID[k]).textContent=s.note+(s.arr.length>TOPN?(open?' ・ ▴ 收合':' ・ ▾ 展開前 '+Math.min(MAXN,s.arr.length)+' 筆'):'');
+}
+document.querySelectorAll('.seclabel[data-k]').forEach(el=>{
+  const k=el.dataset.k,tg=()=>{EXP[k]=!EXP[k];draw(k)};
+  el.addEventListener('click',tg);
+  el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();tg()}});
+});
+
 function search(lat,lng,label){
   const noexp=$('noexp').checked;
   const wgs=DATA.wg.filter(w=>!noexp||w.t!=='Express')
@@ -160,50 +185,14 @@ function search(lat,lng,label){
   const arcs=DATA.arc.map(a=>({...a,d:hav(lat,lng,a.la,a.lo)})).sort((a,b)=>a.d-b.d);
 
   $('origin').innerHTML='📍 查詢位置:'+esc(label);
-  $('wgn').textContent=noexp?'已排除 Express':'含所有店型';
-  $('arcn').textContent='共 '+DATA.arc.length+' 廳';
 
-  const card=(x,isWG)=>{
-    const [num,unit]=fmtN(x.d);
-    let badge='';
-    if(isWG&&x.t==='Express')badge='<span class="badge exp">Express</span>';
-    if(isWG&&x.t==='Sport')badge='<span class="badge spt">Sport</span>';
-    if(!isWG&&x.cnt)badge='<span class="badge warn">'+x.cnt+' 台</span>';
-    return `<div class="card">
-      <div class="rankd"><div class="km" style="color:${isWG?'var(--wg)':'var(--chu)'}">${num}</div><div class="u">${unit}</div></div>
-      <div class="info"><div class="nm">${esc(isWG?'World Gym '+x.n:x.n)}${badge}</div><div class="ad">${esc(x.a)}${!isWG&&x.open&&x.open!=='未知'?' ・ '+esc(x.open):''}</div></div>
-      <a class="navbtn" target="_blank" rel="noopener" href="${gmap(x.la,x.lo)}">導航</a></div>`;
-  };
-  $('wglist').innerHTML=wgs.slice(0,3).map(w=>card(w,true)).join('');
-  $('arclist').innerHTML=arcs.slice(0,3).map(a=>card(a,false)).join('');
-  // maimai(獨立顯示)
-  const mais=(DATA.mai||[]).map(m=>({...m,d:hav(lat,lng,m.la,m.lo)})).sort((a,b)=>a.d-b.d);
-  $('main2').textContent='共 '+(DATA.mai||[]).length+' 廳(僅列 CiRCLE PLUS 最新框)';
-  $('mailist').innerHTML=mais.slice(0,3).map(m=>{
-    const [num,unit]=fmtN(m.d);
-    const plus=(m.v.match(/CiRCLE PLUSx(\d+)/)||[])[1]||m.cnt||0;
-    const vb='<span class="badge mai">PLUS×'+plus+'</span>';
-    return `<div class="card">
-      <div class="rankd"><div class="km" style="color:var(--mai)">${num}</div><div class="u">${unit}</div></div>
-      <div class="info"><div class="nm">${esc(m.n)}${vb}</div><div class="ad">${esc(m.a)}${m.open&&m.open!=='未知'?' ・ '+esc(m.open):''}</div></div>
-      <a class="navbtn" target="_blank" rel="noopener" href="${gmap(m.la,m.lo)}">導航</a></div>`;
-  }).join('');
-
-  // SDVX Valkyrie / GITADORA DrumMania(獨立顯示)
-  const simple=(list,color,cls,listId,nId,label,tag)=>{
-    const arr=(list||[]).map(m=>({...m,d:hav(lat,lng,m.la,m.lo)})).sort((a,b)=>a.d-b.d);
-    $(nId).textContent='共 '+(list||[]).length+' 廳'+label;
-    $(listId).innerHTML=arr.slice(0,3).map(m=>{
-      const [num,unit]=fmtN(m.d);
-      const vb='<span class="badge '+cls+'">'+tag(m)+'</span>';
-      return `<div class="card">
-        <div class="rankd"><div class="km" style="color:${color}">${num}</div><div class="u">${unit}</div></div>
-        <div class="info"><div class="nm">${esc(m.n)}${vb}</div><div class="ad">${esc(m.a)}${m.open&&m.open!=='未知'?' ・ '+esc(m.open):''}</div></div>
-        <a class="navbtn" target="_blank" rel="noopener" href="${gmap(m.la,m.lo)}">導航</a></div>`;
-    }).join('');
-  };
-  simple(DATA.sdvx,'var(--sd)','sd','sdlist','sdn','(Valkyrie 女武神框)',m=>m.cnt+' 台');
-  simple(DATA.gita,'var(--gi)','gi','gilist','gin','(白/黑筐體・Arena)',m=>(m.fr||'')+' ×'+m.cnt);
+  const sec=(k,arr,note,f)=>{SEC[k]={arr,note,f};draw(k);};
+  sec('wg',wgs,noexp?'已排除 Express':'含所有店型',w=>cardH(w,'var(--wg)','World Gym '+w.n,w.t==='Express'?'<span class="badge exp">Express</span>':w.t==='Sport'?'<span class="badge spt">Sport</span>':''));
+  sec('arc',arcs,'共 '+DATA.arc.length+' 廳',a=>cardH(a,'var(--chu)',a.n,a.cnt?'<span class="badge warn">'+a.cnt+' 台</span>':'',true));
+  const wd=l=>(l||[]).map(m=>({...m,d:hav(lat,lng,m.la,m.lo)})).sort((a,b)=>a.d-b.d);
+  sec('mai',wd(DATA.mai),'共 '+(DATA.mai||[]).length+' 廳(僅列 CiRCLE PLUS 最新框)',m=>cardH(m,'var(--mai)',m.n,'<span class="badge mai">PLUS×'+(((m.v||'').match(/CiRCLE PLUSx(\d+)/)||[])[1]||m.cnt||0)+'</span>',true));
+  sec('sd',wd(DATA.sdvx),'共 '+(DATA.sdvx||[]).length+' 廳(Valkyrie 女武神框)',m=>cardH(m,'var(--sd)',m.n,'<span class="badge sd">'+m.cnt+' 台</span>',true));
+  sec('gi',wd(DATA.gita),'共 '+(DATA.gita||[]).length+' 廳(白/黑筐體・Arena)',m=>cardH(m,'var(--gi)',m.n,'<span class="badge gi">'+(m.fr||'')+' ×'+m.cnt+'</span>',true));
 
   // 一次搞定:在前5近的WG中,找「離我距離 + WG到機廳距離」總和最小、且互距<1.2km的組合
   let best=null;
