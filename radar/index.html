@@ -133,7 +133,7 @@ button{cursor:pointer;border:none;border-radius:10px;font-family:inherit}
 </div>
 
 <div class="note"><div id="upd" style="margin-bottom:6px"></div>
-  資料來源:World Gym 官網(139 間)與 Music Game Map 音Game地圖社群資料。CHUNITHM 61 廳;maimai 僅列有 CiRCLE PLUS 最新框的 97 廳(純舊框/獨立網門市已排除);SDVX 僅列 Valkyrie Model(女武神)22 廳;GITADORA 僅列 DrumMania 白/黑筐體 GALAXY WAVE 及 Arena Model 24 廳(舊筐體 V 系列已排除)。機廳附台數與營業時間,機況以現場為準。距離為直線距離,實際路程會略多。<br><b>最準的查法:</b>到 Google Maps 找到你的位置 → 長按大頭針 → 複製顯示的 Plus Code(例如 7QP3X8V7+64)→ 貼到查詢欄,系統會直接本地解碼,不用連網查地址、不受台灣門牌資料庫不全影響,100% 精準。地址文字查詢用 OpenStreetMap,台灣門牌收錄不齊,查不到時會自動開地圖點選保底。
+  資料來源:World Gym 官網(139 間)與 Music Game Map 音Game地圖社群資料。CHUNITHM 61 廳;maimai 僅列有 CiRCLE PLUS 最新框的 97 廳(純舊框/獨立網門市已排除);SDVX 僅列 Valkyrie Model(女武神)22 廳;GITADORA 僅列 DrumMania 白筐體 GALAXY WAVE 及 Arena Model 18 廳(黑筐體、舊筐體 V 系列已排除)。機廳附台數與營業時間,機況以現場為準。距離為直線距離,實際路程會略多。<br><b>最準的查法:</b>到 Google Maps 找到你的位置 → 長按大頭針 → 複製顯示的 Plus Code(例如 7QP3X8V7+64)→ 貼到查詢欄,系統會直接本地解碼,不用連網查地址、不受台灣門牌資料庫不全影響,100% 精準。地址文字查詢用 OpenStreetMap,台灣門牌收錄不齊,查不到時會自動開地圖點選保底。
 </div>
 </div>
 <script>
@@ -192,7 +192,7 @@ function search(lat,lng,label){
   const wd=l=>(l||[]).map(m=>({...m,d:hav(lat,lng,m.la,m.lo)})).sort((a,b)=>a.d-b.d);
   sec('mai',wd(DATA.mai),'共 '+(DATA.mai||[]).length+' 廳(僅列 CiRCLE PLUS 最新框)',m=>cardH(m,'var(--mai)',m.n,'<span class="badge mai">PLUS×'+(((m.v||'').match(/CiRCLE PLUSx(\d+)/)||[])[1]||m.cnt||0)+'</span>',true));
   sec('sd',wd(DATA.sdvx),'共 '+(DATA.sdvx||[]).length+' 廳(Valkyrie 女武神框)',m=>cardH(m,'var(--sd)',m.n,'<span class="badge sd">'+m.cnt+' 台</span>',true));
-  sec('gi',wd(DATA.gita),'共 '+(DATA.gita||[]).length+' 廳(白/黑筐體・Arena)',m=>cardH(m,'var(--gi)',m.n,'<span class="badge gi">'+(m.fr||'')+' ×'+m.cnt+'</span>',true));
+  sec('gi',wd(DATA.gita),'共 '+(DATA.gita||[]).length+' 廳(白筐體・Arena)',m=>cardH(m,'var(--gi)',m.n,'<span class="badge gi">'+(m.fr||'')+' ×'+m.cnt+'</span>',true));
 
   // 一次搞定:在前5近的WG中,找「離我距離 + WG到機廳距離」總和最小、且互距<1.2km的組合
   let best=null;
